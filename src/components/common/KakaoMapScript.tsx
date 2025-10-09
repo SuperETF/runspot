@@ -2,16 +2,10 @@
 
 import { useEffect } from 'react'
 
-interface KakaoMapScriptProps {
-  onLoad?: () => void
-  onError?: (error: Error) => void
-}
-
-const KakaoMapScript = ({ onLoad, onError }: KakaoMapScriptProps) => {
+const KakaoMapScript = () => {
   useEffect(() => {
     // 이미 로드되어 있는지 확인
     if (window.kakao && window.kakao.maps) {
-      onLoad?.()
       return
     }
 
@@ -20,7 +14,6 @@ const KakaoMapScript = ({ onLoad, onError }: KakaoMapScriptProps) => {
     if (!apiKey) {
       const error = new Error('Kakao Maps API 키가 설정되지 않았습니다.')
       console.error(error)
-      onError?.(error)
       return
     }
 
@@ -33,14 +26,12 @@ const KakaoMapScript = ({ onLoad, onError }: KakaoMapScriptProps) => {
       // Kakao Maps API 초기화
       window.kakao.maps.load(() => {
         console.log('Kakao Maps API 로드 완료')
-        onLoad?.()
       })
     }
 
     script.onerror = () => {
       const error = new Error('Kakao Maps API 스크립트 로드 실패')
       console.error(error)
-      onError?.(error)
     }
 
     // 스크립트를 head에 추가
@@ -52,7 +43,7 @@ const KakaoMapScript = ({ onLoad, onError }: KakaoMapScriptProps) => {
         document.head.removeChild(script)
       }
     }
-  }, [onLoad, onError])
+  }, [])
 
   return null // 이 컴포넌트는 렌더링되지 않음
 }
