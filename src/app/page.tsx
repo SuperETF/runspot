@@ -1,103 +1,157 @@
-import Image from "next/image";
+'use client'
+
+import { useState } from 'react'
+import KakaoMap from '@/components/common/KakaoMap'
+import CoursePolyline from '@/components/common/CoursePolyline'
+import CourseMarker from '@/components/common/CourseMarker'
+import { GPSCoordinate } from '@/types/database'
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [selectedPoint, setSelectedPoint] = useState<GPSCoordinate | null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // 샘플 코스 데이터 (한강공원 여의도)
+  const sampleRoute: GPSCoordinate[] = [
+    { lat: 37.5285, lng: 126.9367 },
+    { lat: 37.5290, lng: 126.9380 },
+    { lat: 37.5295, lng: 126.9390 },
+    { lat: 37.5300, lng: 126.9400 },
+    { lat: 37.5305, lng: 126.9410 },
+    { lat: 37.5300, lng: 126.9420 },
+    { lat: 37.5295, lng: 126.9430 },
+    { lat: 37.5290, lng: 126.9440 },
+    { lat: 37.5285, lng: 126.9450 },
+    { lat: 37.5280, lng: 126.9440 },
+    { lat: 37.5275, lng: 126.9430 },
+    { lat: 37.5270, lng: 126.9420 },
+    { lat: 37.5275, lng: 126.9410 },
+    { lat: 37.5280, lng: 126.9400 },
+    { lat: 37.5285, lng: 126.9390 },
+    { lat: 37.5285, lng: 126.9367 }
+  ]
+
+  const center = { lat: 37.5285, lng: 126.9400 }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* 헤더 */}
+      <header className="bg-card border-b border-border">
+        <div className="container mx-auto px-4 py-6">
+          <h1 className="text-3xl font-bold text-primary">
+            🏃‍♂️ RunSpot Seoul
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            서울의 베스트 런닝 코스를 발견하고 공유하세요
+          </p>
+        </div>
+      </header>
+
+      {/* 메인 컨텐츠 */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* 지도 섹션 */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">샘플 코스: 한강공원 여의도</h2>
+            <div className="rounded-lg overflow-hidden border border-border">
+              <KakaoMap
+                center={center}
+                zoom={4}
+                height="400px"
+                onClick={(coord) => setSelectedPoint(coord)}
+              >
+                {/* 코스 경로 */}
+                <CoursePolyline 
+                  path={sampleRoute}
+                  strokeColor="#00FF88"
+                  strokeWeight={4}
+                />
+                
+                {/* 시작점 마커 */}
+                <CourseMarker
+                  position={sampleRoute[0]}
+                  type="start"
+                  title="시작점"
+                  content="한강공원 여의도 시작점"
+                />
+                
+                {/* 종료점 마커 */}
+                <CourseMarker
+                  position={sampleRoute[sampleRoute.length - 1]}
+                  type="end"
+                  title="종료점"
+                  content="한강공원 여의도 종료점"
+                />
+
+                {/* 클릭한 지점 마커 */}
+                {selectedPoint && (
+                  <CourseMarker
+                    position={selectedPoint}
+                    type="waypoint"
+                    title="선택한 지점"
+                    content={`위도: ${selectedPoint.lat.toFixed(6)}, 경도: ${selectedPoint.lng.toFixed(6)}`}
+                  />
+                )}
+              </KakaoMap>
+            </div>
+          </div>
+
+          {/* 정보 섹션 */}
+          <div className="space-y-6">
+            <div className="bg-card p-6 rounded-lg border border-border">
+              <h3 className="text-lg font-semibold mb-4">코스 정보</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">거리</span>
+                  <span className="font-medium">5.2km</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">예상 시간</span>
+                  <span className="font-medium">35분</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">난이도</span>
+                  <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-sm">
+                    초급
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">코스 타입</span>
+                  <span className="font-medium">한강</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 클릭한 지점 정보 */}
+            {selectedPoint && (
+              <div className="bg-card p-6 rounded-lg border border-border">
+                <h3 className="text-lg font-semibold mb-4">선택한 지점</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">위도</span>
+                    <span className="font-mono text-sm">{selectedPoint.lat.toFixed(6)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">경도</span>
+                    <span className="font-mono text-sm">{selectedPoint.lng.toFixed(6)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 기능 설명 */}
+            <div className="bg-card p-6 rounded-lg border border-border">
+              <h3 className="text-lg font-semibold mb-4">Kakao Maps 연동 완료! 🎉</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>✅ 지도 표시</li>
+                <li>✅ 코스 경로 (폴리라인)</li>
+                <li>✅ 시작/종료점 마커</li>
+                <li>✅ 클릭 이벤트</li>
+                <li>✅ 정보창 표시</li>
+                <li>✅ 다크 테마 적용</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
-  );
+  )
 }
