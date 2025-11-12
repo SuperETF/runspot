@@ -1,5 +1,4 @@
 import { supabase } from './supabase'
-import { Course } from '@/types/database'
 
 // 모든 코스 가져오기 (검증된 코스만)
 export async function getCourses(limit = 10) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 
@@ -12,17 +12,13 @@ export default function SupabaseStatus({ onConnectionChange }: SupabaseStatusPro
   const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    checkConnection()
-  }, [])
-
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     try {
       setStatus('checking')
       setError(null)
 
       // Supabase 연결 테스트
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('courses')
         .select('count')
         .limit(1)
@@ -39,7 +35,11 @@ export default function SupabaseStatus({ onConnectionChange }: SupabaseStatusPro
       setError(err.message || '데이터베이스 연결에 실패했습니다.')
       onConnectionChange?.(false)
     }
-  }
+  }, [onConnectionChange])
+
+  useEffect(() => {
+    checkConnection()
+  }, [checkConnection])
 
   if (status === 'checking') {
     return (

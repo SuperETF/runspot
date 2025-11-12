@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase'
-import { RunningLog, Course } from '@/types/database'
 
 // 사용자의 최근 런닝 로그 가져오기 (코스 정보 포함)
 export async function getRecentRunningLogs(userId: string, limit: number = 10) {

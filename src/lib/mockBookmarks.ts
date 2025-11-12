@@ -35,16 +35,6 @@ const loadBookmarksFromStorage = () => {
   }
 }
 
-// localStorage에 북마크 데이터 저장
-const saveBookmarksToStorage = () => {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(mockBookmarks))
-    } catch (error) {
-      console.error('북마크 데이터 저장 실패:', error)
-    }
-  }
-}
 
 // 초기 로드
 loadBookmarksFromStorage()

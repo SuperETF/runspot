@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Play, Pause, Square, Save, Trash2, X } from 'lucide-react'
 import KakaoMap from '@/components/common/KakaoMap'
@@ -25,7 +25,7 @@ interface CourseData {
   estimatedTime: number
 }
 
-export default function CreateCoursePage() {
+function CreateCourseContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mode = searchParams.get('mode') || 'hybrid'
@@ -679,5 +679,13 @@ export default function CreateCoursePage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function CreateCoursePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-black text-white">로딩 중...</div>}>
+      <CreateCourseContent />
+    </Suspense>
   )
 }

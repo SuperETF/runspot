@@ -10,6 +10,7 @@ interface GPSPoint {
   lat: number
   lng: number
   timestamp: number
+  accuracy?: number
 }
 
 interface RunningMapProps {
@@ -162,64 +163,6 @@ export default function RunningMap({ isRunning, onLocationUpdate, onDistanceUpda
     )
   }
 
-  // GPS 추적 시작/중지
-  useEffect(() => {
-    if (isRunning && !watchId) {
-      // GPS 추적 시작
-      if (navigator.geolocation) {
-        const id = navigator.geolocation.watchPosition(
-          (position) => {
-            const newPoint: GPSPoint = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-              timestamp: Date.now()
-            }
-
-            // GPS 경로에 추가
-            setGpsPath(prev => [...prev, newPoint])
-
-            // 지도 업데이트
-            if (map && (window as any).kakao) {
-              const position = new (window as any).kakao.maps.LatLng(newPoint.lat, newPoint.lng)
-              
-              // 현재 위치 마커 업데이트
-              if (currentMarker) {
-                currentMarker.setPosition(position)
-              }
-              
-              // 지도 중심 이동
-              map.setCenter(position)
-              
-              // 경로 그리기
-              updatePolyline(gpsPath.concat(newPoint))
-            }
-
-            // 위치 업데이트는 useEffect에서 처리
-          },
-          (error) => {
-            console.error('GPS 추적 오류:', error)
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 1000
-          }
-        )
-        setWatchId(id)
-      }
-    } else if (!isRunning && watchId) {
-      // GPS 추적 중지
-      navigator.geolocation.clearWatch(watchId)
-      setWatchId(null)
-    }
-
-    return () => {
-      if (watchId) {
-        navigator.geolocation.clearWatch(watchId)
-      }
-    }
-  }, [isRunning, map, currentMarker, gpsPath, watchId, onLocationUpdate, onDistanceUpdate])
-
   // 경로선 업데이트
   const updatePolyline = (path: GPSPoint[]) => {
     if (!map || !(window as any).kakao || !(window as any).kakao.maps || path.length < 2) return
@@ -243,6 +186,68 @@ export default function RunningMap({ isRunning, onLocationUpdate, onDistanceUpda
     newPolyline.setMap(map)
     setPolyline(newPolyline)
   }
+
+  // GPS 추적 시작/중지
+  useEffect(() => {
+    if (isRunning && !watchId) {
+      // GPS 추적 시작
+      if (navigator.geolocation) {
+      }
+      return
+    }
+
+    // GPS 추적 시작
+    if (!watchId && navigator.geolocation) {
+      const id = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+          const accuracy = position.coords.accuracy
+          
+          const newPoint: GPSPoint = {
+            lat,
+            lng,
+            timestamp: Date.now(),
+            accuracy
+          }
+
+          setGpsPath(prev => {
+            const updated = [...prev, newPoint]
+            updatePolyline(updated)
+            return updated
+          })
+
+          // 현재 위치 마커 업데이트
+          const moveLatLon = new (window as any).kakao.maps.LatLng(lat, lng)
+          if (currentMarker) {
+            currentMarker.setPosition(moveLatLon)
+          }
+        },
+        (error) => {
+          console.error('GPS 추적 오류:', error)
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 1000
+        }
+      )
+      setWatchId(id)
+    }
+
+    // GPS 추적 중지
+    if (!isRunning && watchId) {
+      // GPS 추적 중지
+      navigator.geolocation.clearWatch(watchId)
+      setWatchId(null)
+    }
+
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+    }
+  }, [isRunning, map, currentMarker, gpsPath, watchId, onLocationUpdate, onDistanceUpdate])
 
   // 총 거리 계산 (Haversine 공식)
   const calculateTotalDistance = (path: GPSPoint[]): number => {

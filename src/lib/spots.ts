@@ -1,5 +1,4 @@
 import { supabase } from './supabase'
-import { getCurrentUserId } from './auth'
 
 // 거리 정보가 포함된 스팟 타입
 export interface SpotWithDistance {

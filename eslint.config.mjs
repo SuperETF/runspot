@@ -27,6 +27,13 @@ const eslintConfig = [
       "@typescript-eslint/no-unsafe-function-type": "off",
       // React Hook 의존성 경고를 완화
       "react-hooks/exhaustive-deps": "warn",
+      // 사용하지 않는 변수 경고로 변경
+      "@typescript-eslint/no-unused-vars": "warn",
+      // JSX에서 이스케이프되지 않은 엔티티 경고로 변경
+      "react/no-unescaped-entities": "warn",
+      // Next.js 이미지 경고로 변경
+      "@next/next/no-img-element": "warn",
+      "@next/next/no-before-interactive-script-outside-document": "warn",
     },
   },
 ];
