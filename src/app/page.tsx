@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, MapPin, Play, Bookmark, User, Bell, Navigation, Clock, Star, Home as HomeIcon, Store, Mail, X } from 'lucide-react'
+import { Search, MapPin, Play, Bookmark, User, Navigation, Clock, Home as HomeIcon, Store, Mail, X } from 'lucide-react'
 import KakaoMap from '@/components/common/KakaoMap'
 import CoursePolyline from '@/components/common/CoursePolyline'
 import CourseMarker from '@/components/common/CourseMarker'
 import SupabaseStatus from '@/components/common/SupabaseStatus'
+import AuthenticationBanner from '@/components/common/AuthenticationBanner'
 import BookmarkButton from '@/components/BookmarkButton'
 import { GPSCoordinate, Course } from '@/types/database'
 import { getNearbyCoursesFromLocation } from '@/lib/courses'
@@ -247,7 +248,7 @@ export default function Home() {
   const loadNearbyCourses = async (lat: number, lng: number) => {
     try {
       setLoading(true)
-      const courses = await getNearbyCoursesFromLocation(lat, lng, 10, 8)
+      const courses = await getNearbyCoursesFromLocation(lat, lng, 3, 8)
       setNearbyCourses(courses)
     } catch (error) {
       console.error('주변 코스 로드 실패:', error)
@@ -256,15 +257,6 @@ export default function Home() {
     }
   }
 
-  // 난이도 한글 변환
-  const getDifficultyText = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return '초급'
-      case 'medium': return '중급'
-      case 'hard': return '고급'
-      default: return '초급'
-    }
-  }
 
   // 코스 타입 이모지
   const getCourseEmoji = (courseType: string) => {
@@ -315,6 +307,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      {/* 인증 가능 알림 배너 */}
+      {userProfile?.id && (
+        <AuthenticationBanner userId={userProfile.id} />
+      )}
+      
       {/* 상단 네비게이션 */}
       <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
         <div className="flex items-center justify-between px-4 py-3 animate-fade-in-up">
@@ -324,17 +321,12 @@ export default function Home() {
             <p className="text-xs text-gray-400">Seoul</p>
           </div>
           
-          {/* 우측: 알림 + 프로필 */}
+          {/* 우측: 프로필 */}
           <div className="flex items-center gap-3">
             {/* Supabase 연결 상태 */}
             <div className="hidden sm:block">
               <SupabaseStatus onConnectionChange={setIsConnected} />
             </div>
-            <button className="p-1 hover:bg-gray-800 rounded-lg transition-colors relative">
-              <Bell className="w-6 h-6 text-gray-400" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-            </button>
-            
             {/* 프로필 드롭다운 */}
             <div className="relative profile-dropdown">
               <button 
@@ -425,7 +417,7 @@ export default function Home() {
                   </span>
                   <span className="text-gray-300">•</span>
                   <span className="text-gray-300">
-                    10km 반경
+                    3km 반경
                   </span>
                   {locationAccuracy && (
                     <>
@@ -484,30 +476,12 @@ export default function Home() {
                 <div className="flex items-center gap-4">
                   <div className="text-3xl animate-pulse">{getCourseEmoji(course.course_type)}</div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="mb-1">
                       <h4 className="font-semibold text-white">{course.name}</h4>
-                      <div className="flex items-center gap-1">
-                        <span className="text-yellow-400 animate-pulse">★</span>
-                        <span className="text-sm text-gray-300">{course.rating_avg?.toFixed(1) || '0.0'}</span>
-                      </div>
                     </div>
-                    <p className="text-sm text-gray-400 mb-2">
-                      {course.area} • {course.distanceFromUser?.toFixed(1)}km 거리
-                    </p>
                     <div className="flex items-center gap-3 text-sm">
+                      <span className="text-gray-400">{course.area}</span>
                       <span className="text-[#00FF88] font-medium">{course.distance}km</span>
-                      <span className="text-gray-400">•</span>
-                      <span className="text-gray-300">{course.duration}분</span>
-                      <span className="text-gray-400">•</span>
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        course.difficulty === 'easy' 
-                          ? 'bg-green-500/20 text-green-400'
-                          : course.difficulty === 'medium'
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {getDifficultyText(course.difficulty)}
-                      </span>
                     </div>
                   </div>
                   <div className="flex gap-2">

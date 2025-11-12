@@ -17,15 +17,33 @@ interface RunningMapProps {
   isRunning: boolean
   onLocationUpdate?: (location: GPSPoint) => void
   onDistanceUpdate?: (distance: number) => void
+  courseRoute?: Array<{ lat: number; lng: number }>
+  userLocation?: { lat: number; lng: number } | null
+  showStartPoint?: boolean
+  currentCheckpoint?: number
+  passedCheckpoints?: number[]
+  isCompleted?: boolean
 }
 
 // 카카오맵 타입은 KakaoMap.tsx에서 이미 선언됨
 
-export default function RunningMap({ isRunning, onLocationUpdate, onDistanceUpdate }: RunningMapProps) {
+export default function RunningMap({ 
+  isRunning, 
+  onLocationUpdate, 
+  onDistanceUpdate, 
+  courseRoute = [], 
+  userLocation, 
+  showStartPoint = false,
+  currentCheckpoint = 0,
+  passedCheckpoints = [],
+  isCompleted = false
+}: RunningMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<any>(null)
   const [currentMarker, setCurrentMarker] = useState<any>(null)
   const [polyline, setPolyline] = useState<any>(null)
+  const [coursePolyline, setCoursePolyline] = useState<any>(null)
+  const [startPointMarker, setStartPointMarker] = useState<any>(null)
   const [gpsPath, setGpsPath] = useState<GPSPoint[]>([])
   const [watchId, setWatchId] = useState<number | null>(null)
   const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown')
@@ -98,6 +116,67 @@ export default function RunningMap({ isRunning, onLocationUpdate, onDistanceUpda
       }
     }
   }, [gpsPath, onLocationUpdate, onDistanceUpdate])
+
+  // 코스 경로와 시작점 표시
+  useEffect(() => {
+    if (!map || !courseRoute || courseRoute.length === 0) return
+
+    // 기존 코스 경로 제거
+    if (coursePolyline) {
+      coursePolyline.setMap(null)
+    }
+
+    // 기존 시작점 마커 제거
+    if (startPointMarker) {
+      startPointMarker.setMap(null)
+    }
+
+    // 코스 경로 표시
+    const path = courseRoute.map(point => 
+      new (window as any).kakao.maps.LatLng(point.lat, point.lng)
+    )
+
+    const newCoursePolyline = new (window as any).kakao.maps.Polyline({
+      path: path,
+      strokeWeight: 4,
+      strokeColor: '#00FF88',
+      strokeOpacity: 0.8,
+      strokeStyle: 'solid'
+    })
+
+    newCoursePolyline.setMap(map)
+    setCoursePolyline(newCoursePolyline)
+
+    // 시작점 마커 표시
+    if (showStartPoint && courseRoute[0]) {
+      const startPoint = courseRoute[0]
+      const startPosition = new (window as any).kakao.maps.LatLng(startPoint.lat, startPoint.lng)
+      
+      // 커스텀 마커 이미지 생성
+      const imageSrc = 'data:image/svg+xml;base64,' + btoa(`
+        <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="18" fill="#00FF88" stroke="#000" stroke-width="2"/>
+          <text x="20" y="26" text-anchor="middle" fill="#000" font-size="12" font-weight="bold">START</text>
+        </svg>
+      `)
+      
+      const imageSize = new (window as any).kakao.maps.Size(40, 40)
+      const imageOption = { offset: new (window as any).kakao.maps.Point(20, 20) }
+      const markerImage = new (window as any).kakao.maps.MarkerImage(imageSrc, imageSize, imageOption)
+
+      const newStartPointMarker = new (window as any).kakao.maps.Marker({
+        position: startPosition,
+        image: markerImage,
+        map: map
+      })
+
+      setStartPointMarker(newStartPointMarker)
+
+      // 지도 중심을 시작점으로 이동
+      map.setCenter(startPosition)
+      map.setLevel(4)
+    }
+  }, [map, courseRoute, showStartPoint])
 
   // 위치 권한 허용 처리
   const handleLocationPermissionGranted = (position: GeolocationPosition) => {

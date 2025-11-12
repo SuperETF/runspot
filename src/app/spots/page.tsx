@@ -1,11 +1,70 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, MapPin, Clock, Star, Phone, ExternalLink, Coffee, Utensils, ShoppingBag, Heart, CheckCircle, X, Timer, Calendar, Navigation, Play, History } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Phone, Navigation, X, CheckCircle, AlertCircle, Heart, ChevronLeft, ChevronRight, Coffee, Utensils, ShoppingBag, Dumbbell, Wrench, Play } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { getSpots, getNearbySpots, getUserActiveCoupons, getSpotActiveCoupon, createSpotCoupon, cleanupExpiredCoupons, getUserCouponHistory, type SpotWithDistance } from '@/lib/spots'
 import type { Spot } from '@/types/database'
 import { getGuestUserId } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
+
+// 이미지 슬라이더 컴포넌트
+function ImageSlider({ images, spotName }: { images: string[], spotName: string }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  const nextImage = () => {
+    setCurrentIndex((prev) => (prev + 1) % images.length)
+  }
+
+  const prevImage = () => {
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)
+  }
+
+  if (!images || images.length === 0) return null
+
+  return (
+    <div className="relative w-full h-48 bg-gray-800 rounded-xl overflow-hidden">
+      <img
+        src={images[currentIndex]}
+        alt={`${spotName} 전경 ${currentIndex + 1}`}
+        className="w-full h-full object-cover"
+      />
+      
+      {images.length > 1 && (
+        <>
+          {/* 이전 버튼 */}
+          <button
+            onClick={prevImage}
+            className="absolute left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+          
+          {/* 다음 버튼 */}
+          <button
+            onClick={nextImage}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-white" />
+          </button>
+          
+          {/* 인디케이터 */}
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-2">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === currentIndex ? 'bg-white' : 'bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function SpotsPage() {
   const router = useRouter()
@@ -88,7 +147,7 @@ export default function SpotsPage() {
         spotsData = await getNearbySpots(
           userLocation.lat, 
           userLocation.lng, 
-          10, // 10km 반경
+          3, // 3km 반경
           selectedCategory === 'all' ? undefined : selectedCategory
         )
       } else {
@@ -269,35 +328,47 @@ export default function SpotsPage() {
       const existingCoupon = await getSpotActiveCoupon(userId, spot.id)
       
       if (existingCoupon && (existingCoupon as any).expires_at && currentTime < new Date((existingCoupon as any).expires_at)) {
-        // 기존 쿠폰이 아직 유효하면 그것을 다시 표시 (필드명 통일)
-        const coupon = existingCoupon as any
-        const normalizedCoupon = {
-          ...coupon,
-          expiresAt: new Date(coupon.expires_at),
-          issuedAt: new Date(coupon.issued_at),
-          discount: coupon.discount_info
-        }
+        // 기존 쿠폰이 아직 유효하면 그것을 다시 표시
         setSelectedSpot(spot)
-        setCouponData(normalizedCoupon)
+        setCouponData(existingCoupon)
         setShowCouponModal(true)
         return
       }
 
-      // 새로운 인증 확인 (테스트용 - 거리 제한 없음)
-      if (!userLocation) {
-        // 위치가 없어도 기본 위치로 설정
-        setUserLocation({ lat: 37.5665, lng: 126.9780 }) // 서울 기본 좌표
+      // 인증 가능한 완주 기록 확인
+      const { data: validRunningLog, error: runningLogError } = await (supabase as any)
+        .from('running_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .not('expires_at', 'is', null)
+        .gt('expires_at', new Date().toISOString()) // 아직 만료되지 않은 것
+        .lt('authentication_count', 2) // 아직 2곳에서 인증하지 않은 것
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (runningLogError || !validRunningLog) {
+        // 인증 가능한 완주 기록이 없는 경우
+        alert('🏃‍♂️ 런닝을 먼저 완주해주세요!\n\n제휴 스팟 인증을 위해서는:\n• 최근 2시간 내 코스 완주 필요\n• 완주당 최대 2곳에서 인증 가능\n\n런닝 페이지에서 코스를 선택해 달려보세요!')
+        return
       }
 
       // 새 쿠폰 생성
-      const runningCompletedAt = new Date(Date.now() - 30 * 60 * 1000) // 30분 전 완주했다고 가정
       const newCoupon = await createSpotCoupon(
         userId,
         spot.id,
-        runningCompletedAt,
+        new Date(validRunningLog.completed_at),
         userLocation?.lat || 37.5665,
         userLocation?.lng || 126.9780
       )
+
+      // running_log의 authentication_count 증가
+      await (supabase as any)
+        .from('running_logs')
+        .update({ 
+          authentication_count: (validRunningLog.authentication_count || 0) + 1 
+        })
+        .eq('id', validRunningLog.id)
 
       // 필드명 통일을 위한 정규화
       const couponData = newCoupon as any
@@ -432,12 +503,22 @@ export default function SpotsPage() {
   }
 
   // 운영시간을 한글로 변환
-  const formatOperatingTime = (timeString: string) => {
-    const [startTime, endTime] = timeString.split(' - ')
+  const formatOperatingTime = (timeString: string | null | undefined) => {
+    if (!timeString) return '운영시간 미정'
+    
+    // ' - ' 또는 '-'로 분리 시도
+    const parts = timeString.includes(' - ') ? timeString.split(' - ') : timeString.split('-')
+    if (parts.length !== 2) return timeString // 형식이 맞지 않으면 원본 반환
+    
+    const [startTime, endTime] = parts.map(t => t.trim())
     
     const formatTime = (time: string) => {
+      if (!time || !time.includes(':')) return time
+      
       const [hour, minute] = time.split(':')
       const hourNum = parseInt(hour)
+      
+      if (isNaN(hourNum)) return time
       
       if (hourNum === 0) return '자정'
       if (hourNum === 12) return '정오'
@@ -479,7 +560,7 @@ export default function SpotsPage() {
             onClick={() => router.push('/spots/history')}
             className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl transition-colors"
           >
-            <History className="w-4 h-4" />
+            <Clock className="w-4 h-4" />
             <span>인증 완료 내역</span>
           </button>
         </div>
@@ -537,25 +618,41 @@ export default function SpotsPage() {
                   className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 hover:border-gray-700 transition-all duration-300 animate-fade-in-up cursor-pointer"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-white">{spot.name}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-400">{(spot as any).distance || '0'}km</span>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRunToSpot(spot)
-                        }}
-                        className="flex items-center justify-center gap-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1 px-2 rounded-lg transition-colors text-xs"
-                      >
-                        <Play className="w-3 h-3" />
-                        뛰어가기
-                      </button>
+                  <div className="flex items-start gap-3 mb-3">
+                    {/* 로고 */}
+                    <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
+                      {(spot as any).logo_url ? (
+                        <img 
+                          src={(spot as any).logo_url} 
+                          alt={`${spot.name} 로고`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        getCategoryIcon(spot.category)
+                      )}
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">{spot.signature_menu}</span>
+                    
+                    {/* 스팟 정보 */}
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-white">{spot.name}</h3>
+                        <span className="text-sm text-gray-400">{(spot as any).distance || '0'}km</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-gray-300">{spot.signature_menu}</span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRunToSpot(spot)
+                          }}
+                          className="flex items-center justify-center gap-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1 px-2 rounded-lg transition-colors text-xs ml-auto"
+                        >
+                          <Play className="w-3 h-3" />
+                          뛰어가기
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   
                   <p className="text-sm text-gray-400 mb-3">{spot.description}</p>
@@ -702,12 +799,27 @@ export default function SpotsPage() {
             <div className="text-center">
               {/* 헤더 */}
               <div className="mb-6">
-                <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
-                  {getCategoryIcon(detailSpot.category)}
+                <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl overflow-hidden">
+                  {(detailSpot as any).logo_url ? (
+                    <img 
+                      src={(detailSpot as any).logo_url} 
+                      alt={`${detailSpot.name} 로고`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getCategoryIcon(detailSpot.category)
+                  )}
                 </div>
                 <h2 className="text-xl font-bold text-white mb-1">{detailSpot.name}</h2>
                 <p className="text-gray-400">{detailSpot.signature_menu}</p>
               </div>
+
+              {/* 전경사진 슬라이더 */}
+              {(detailSpot as any).images && (detailSpot as any).images.length > 0 && (
+                <div className="mb-6">
+                  <ImageSlider images={(detailSpot as any).images} spotName={detailSpot.name} />
+                </div>
+              )}
 
               {/* 기본 정보 */}
               <div className="space-y-4 mb-6 text-left">
@@ -739,7 +851,7 @@ export default function SpotsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
                       <Phone className="w-4 h-4" />
-                      <span>{detailSpot.phone}</span>
+                      <span>{detailSpot.phone || '전화번호 미등록'}</span>
                     </div>
                   </div>
                 </div>

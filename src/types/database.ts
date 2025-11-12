@@ -111,24 +111,31 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          course_id: string
+          course_id: string | null
+          course_name: string
           distance: number
           duration: number
-          avg_speed: number
+          pace: number
           calories: number
-          gps_path: Array<{ lat: number; lng: number; timestamp: string }>
           completed_at: string
+          gps_data: any | null
+          created_at: string | null
+          authentication_count: number | null
+          expires_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
-          course_id: string
+          course_id: string | null
+          course_name: string
           distance: number
           duration: number
           avg_speed: number
           calories: number
           gps_path: Array<{ lat: number; lng: number; timestamp: string }>
           completed_at?: string
+          authentication_count?: number | null
+          expires_at?: string | null
         }
         Update: {
           id?: string
@@ -140,6 +147,8 @@ export interface Database {
           calories?: number
           gps_path?: Array<{ lat: number; lng: number; timestamp: string }>
           completed_at?: string
+          authentication_count?: number | null
+          expires_at?: string | null
         }
       }
       reviews: {
@@ -199,12 +208,15 @@ export interface Database {
           latitude: number
           longitude: number
           phone: string | null
-          open_time: string
+          open_time: string | null
           discount_percentage: number | null
           special_offer: string | null
           is_active: boolean | null
           created_at: string | null
           updated_at: string | null
+          logo_url: string | null
+          images: string[] | null
+          thumbnail_image: string | null
         }
         Insert: {
           id?: string
@@ -216,12 +228,15 @@ export interface Database {
           latitude: number
           longitude: number
           phone?: string | null
-          open_time: string
+          open_time?: string | null
           discount_percentage?: number | null
           special_offer?: string | null
           is_active?: boolean | null
           created_at?: string | null
           updated_at?: string | null
+          logo_url?: string | null
+          images?: string[] | null
+          thumbnail_image?: string | null
         }
         Update: {
           id?: string
@@ -233,12 +248,15 @@ export interface Database {
           latitude?: number
           longitude?: number
           phone?: string | null
-          open_time?: string
+          open_time?: string | null
           discount_percentage?: number | null
           special_offer?: string | null
           is_active?: boolean | null
           created_at?: string | null
           updated_at?: string | null
+          logo_url?: string | null
+          images?: string[] | null
+          thumbnail_image?: string | null
         }
       }
       spot_coupons: {
@@ -255,6 +273,7 @@ export interface Database {
           auth_location_lng: number
           is_active: boolean | null
           created_at: string | null
+          running_log_id: string | null
         }
         Insert: {
           id?: string
@@ -269,6 +288,7 @@ export interface Database {
           auth_location_lng: number
           is_active?: boolean | null
           created_at?: string | null
+          running_log_id?: string | null
         }
         Update: {
           id?: string
@@ -283,6 +303,7 @@ export interface Database {
           auth_location_lng?: number
           is_active?: boolean | null
           created_at?: string | null
+          running_log_id?: string | null
         }
       }
       spot_coupon_history: {

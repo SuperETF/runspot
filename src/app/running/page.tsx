@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Play, MapPin, Clock, Star, History, Plus, Search, Filter } from 'lucide-react'
+import { ArrowLeft, Play, MapPin, History, Plus, Search, Filter } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import BookmarkButton from '@/components/BookmarkButton'
 import { getUserRecentCourses } from '@/lib/runningLogs'
@@ -112,23 +112,6 @@ export default function RunningPage() {
     }
   }
 
-  const getDifficultyText = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return '초급'
-      case 'medium': return '중급'
-      case 'hard': return '고급'
-      default: return '초급'
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-500/20 text-green-400'
-      case 'medium': return 'bg-yellow-500/20 text-yellow-400'
-      case 'hard': return 'bg-red-500/20 text-red-400'
-      default: return 'bg-green-500/20 text-green-400'
-    }
-  }
 
   const formatLastRun = (dateString: string) => {
     const date = new Date(dateString)
@@ -143,7 +126,25 @@ export default function RunningPage() {
   }
 
   const startRunning = (courseId: string) => {
-    const course = recentCourses.find(c => c.id === courseId)
+    const course = [...recentCourses, ...exploreCourses].find(c => c.id === courseId)
+    if (!course) {
+      alert('코스 정보를 찾을 수 없습니다.')
+      return
+    }
+
+    // 코스 데이터를 세션 스토리지에 저장
+    const courseData = {
+      id: course.id,
+      name: course.name,
+      description: course.description,
+      gps_route: course.gps_route,
+      distance: course.distance,
+      duration: course.duration,
+      difficulty: course.difficulty,
+      area: course.area
+    }
+    sessionStorage.setItem('selected_course', JSON.stringify(courseData))
+    
     router.push(`/running/start?courseId=${courseId}&courseName=${encodeURIComponent(course?.name || '')}`)
   }
 
@@ -352,26 +353,13 @@ export default function RunningPage() {
                         <BookmarkButton courseId={course.id} />
                       </div>
                       
-                      <div className="flex items-center gap-2 mb-3">
-                        <p className="text-sm text-gray-400">{course.area}</p>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span className="text-sm text-gray-300">{course.rating_avg?.toFixed(1) || '0.0'}</span>
-                        </div>
+                      <div className="mb-2">
+                        <p className="text-sm text-gray-500">{course.description || '서울의 아름다운 런닝 코스'}</p>
                       </div>
                       
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1 text-sm text-gray-300">
-                          <MapPin className="w-4 h-4" />
-                          <span>{course.distance}km</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-300">
-                          <Clock className="w-4 h-4" />
-                          <span>{course.duration}분</span>
-                        </div>
-                        <span className={`px-2 py-1 rounded-full text-xs ${getDifficultyColor(course.difficulty)}`}>
-                          {getDifficultyText(course.difficulty)}
-                        </span>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="text-gray-400">{course.area}</span>
+                        <span className="text-[#00FF88] font-medium">{course.distance}km</span>
                       </div>
                     </div>
                   </div>
@@ -450,26 +438,13 @@ export default function RunningPage() {
                             <h4 className="font-semibold text-white">{course.name}</h4>
                           </div>
                           
-                          <div className="flex items-center gap-2 mb-3">
-                            <p className="text-sm text-gray-400">{course.area}</p>
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm text-gray-300">{course.rating_avg?.toFixed(1) || '0.0'}</span>
-                            </div>
+                          <div className="mb-2">
+                            <p className="text-sm text-gray-500">{course.description || '서울의 아름다운 런닝 코스'}</p>
                           </div>
                           
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1 text-sm text-gray-300">
-                              <MapPin className="w-4 h-4" />
-                              <span>{course.distance}km</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-300">
-                              <Clock className="w-4 h-4" />
-                              <span>{course.duration}분</span>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs ${getDifficultyColor(course.difficulty)}`}>
-                              {getDifficultyText(course.difficulty)}
-                            </span>
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="text-gray-400">{course.area}</span>
+                            <span className="text-[#00FF88] font-medium">{course.distance}km</span>
                           </div>
                         </div>
                       </div>
@@ -501,17 +476,6 @@ export default function RunningPage() {
                 </div>
               )
             )}
-        </div>
-
-        {/* 런닝 팁 */}
-        <div className="bg-gradient-to-r from-[#00FF88]/10 to-[#00E077]/10 rounded-2xl p-6 border border-[#00FF88]/20">
-          <h3 className="text-lg font-semibold text-white mb-3">💡 런닝 팁</h3>
-          <div className="space-y-2 text-sm text-gray-300">
-            <p>• 런닝 전 5-10분 워밍업을 해주세요</p>
-            <p>• 충분한 수분 섭취를 잊지 마세요</p>
-            <p>• 자신의 페이스에 맞춰 천천히 시작하세요</p>
-            <p>• 런닝 후 스트레칭으로 마무리하세요</p>
-          </div>
         </div>
 
         {/* 하단 여백 */}

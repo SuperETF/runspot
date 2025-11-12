@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Map, Route, Settings, Users, BarChart3, Trash2, Eye } from 'lucide-react'
+import { Plus, Map, Route, Settings, Users, BarChart3, Trash2, Eye, Store, X, Edit } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function AdminPage() {
@@ -20,6 +20,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'courses', name: '코스 관리', icon: Route },
+    { id: 'spots', name: '제휴 스팟', icon: Store },
     { id: 'users', name: '사용자 관리', icon: Users },
     { id: 'analytics', name: '통계', icon: BarChart3 },
     { id: 'settings', name: '설정', icon: Settings }
@@ -96,6 +97,7 @@ export default function AdminPage() {
           {/* 메인 콘텐츠 */}
           <div className="flex-1">
             {activeTab === 'courses' && <CoursesTab />}
+            {activeTab === 'spots' && <SpotsTab />}
             {activeTab === 'users' && <UsersTab />}
             {activeTab === 'analytics' && <AnalyticsTab />}
             {activeTab === 'settings' && <SettingsTab />}
@@ -105,6 +107,7 @@ export default function AdminPage() {
         {/* 모바일: 메인 콘텐츠 */}
         <div className="block lg:hidden">
           {activeTab === 'courses' && <CoursesTab />}
+          {activeTab === 'spots' && <SpotsTab />}
           {activeTab === 'users' && <UsersTab />}
           {activeTab === 'analytics' && <AnalyticsTab />}
           {activeTab === 'settings' && <SettingsTab />}
@@ -398,6 +401,1038 @@ function CoursesTab() {
             </>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// 제휴 스팟 관리 탭
+function SpotsTab() {
+  const [spots, setSpots] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'restaurant',
+    description: '',
+    signature_menu: '',
+    address: '',
+    phone: '',
+    open_time: '',
+    discount_percentage: '',
+    special_offer: '',
+    logo_url: '',
+    images: [] as string[]
+  })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [editingSpot, setEditingSpot] = useState<any>(null)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // 제휴 스팟 목록 불러오기
+  const loadSpots = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await (supabase as any)
+        .from('spots')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('스팟 로딩 오류:', error)
+      } else {
+        setSpots(data || [])
+      }
+    } catch (error) {
+      console.error('스팟 로딩 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 컴포넌트 마운트 시 스팟 로딩
+  useEffect(() => {
+    loadSpots()
+  }, [])
+
+  // 폼 데이터 변경 핸들러
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  // 로고 파일 선택 핸들러
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // 파일 크기 검증 (50KB = 51200 bytes)
+      if (file.size > 51200) {
+        alert('로고 이미지는 50KB 이하로 업로드해주세요.')
+        e.target.value = ''
+        return
+      }
+      
+      // 이미지 타입 검증
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.')
+        e.target.value = ''
+        return
+      }
+      
+      setLogoFile(file)
+    }
+  }
+
+  // 전경사진 파일 선택 핸들러
+  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const validFiles: File[] = []
+    
+    for (const file of files) {
+      // 파일 크기 검증 (200KB = 204800 bytes)
+      if (file.size > 204800) {
+        alert(`"${file.name}"은 200KB를 초과합니다. 더 작은 파일을 선택해주세요.`)
+        continue
+      }
+      
+      // 이미지 타입 검증
+      if (!file.type.startsWith('image/')) {
+        alert(`"${file.name}"은 이미지 파일이 아닙니다.`)
+        continue
+      }
+      
+      validFiles.push(file)
+    }
+    
+    if (validFiles.length > 0) {
+      setImageFiles(prev => [...prev, ...validFiles])
+    }
+    
+    // input 초기화
+    e.target.value = ''
+  }
+
+  // 전경사진 제거 핸들러
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // 이미지 압축 함수
+  const compressImage = (file: File, maxWidth: number, maxHeight: number, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')!
+      const img = new Image()
+      
+      img.onload = () => {
+        // 비율 유지하면서 크기 조정
+        let { width, height } = img
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height
+            height = maxHeight
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        // 이미지 그리기
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Base64로 변환 (압축 적용)
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality)
+        resolve(compressedBase64)
+      }
+      
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  // 파일을 Base64로 변환하는 함수 (압축 적용)
+  const fileToBase64 = async (file: File): Promise<string> => {
+    // 로고는 200x200, 전경사진은 800x600으로 압축
+    const isLogo = file === logoFile
+    const maxWidth = isLogo ? 200 : 800
+    const maxHeight = isLogo ? 200 : 600
+    const quality = isLogo ? 0.9 : 0.8
+    
+    return await compressImage(file, maxWidth, maxHeight, quality)
+  }
+
+  // 스팟 등록
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.address) {
+      alert('스팟명과 주소는 필수 입력 항목입니다.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      // 주소를 좌표로 변환 (임시로 서울 중심 좌표 사용)
+      const latitude = 37.5665 + (Math.random() - 0.5) * 0.1
+      const longitude = 126.9780 + (Math.random() - 0.5) * 0.1
+
+      // 이미지 처리를 병렬로 실행
+      const imagePromises: Promise<string>[] = []
+      
+      // 로고 이미지 처리
+      if (logoFile) {
+        imagePromises.push(fileToBase64(logoFile))
+      }
+
+      // 전경사진들 처리 (병렬)
+      const imageFilePromises = imageFiles.map(file => fileToBase64(file))
+      
+      // 모든 이미지를 병렬로 처리
+      const [logoUrl, ...imageUrls] = await Promise.all([
+        logoFile ? fileToBase64(logoFile) : Promise.resolve(''),
+        ...imageFilePromises
+      ])
+
+      const spotData = {
+        ...formData,
+        latitude,
+        longitude,
+        logo_url: logoUrl,
+        images: imageUrls,
+        discount_percentage: formData.discount_percentage ? parseInt(formData.discount_percentage) : null,
+        is_active: true
+      }
+
+      const { error } = await (supabase as any)
+        .from('spots')
+        .insert([spotData])
+
+      if (error) {
+        console.error('스팟 등록 오류:', error)
+        alert(`스팟 등록 중 오류가 발생했습니다: ${error.message}`)
+        return
+      }
+
+      alert('제휴 스팟이 성공적으로 등록되었습니다!')
+      setShowCreateForm(false)
+      setFormData({
+        name: '',
+        category: 'restaurant',
+        description: '',
+        signature_menu: '',
+        address: '',
+        phone: '',
+        open_time: '',
+        discount_percentage: '',
+        special_offer: '',
+        logo_url: '',
+        images: []
+      })
+      setLogoFile(null)
+      setImageFiles([])
+      loadSpots()
+
+    } catch (error: any) {
+      console.error('스팟 등록 실패:', error)
+      alert(`스팟 등록 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // 스팟 수정 시작
+  const startEditSpot = (spot: any) => {
+    setEditingSpot(spot)
+    setFormData({
+      name: spot.name || '',
+      category: spot.category || 'restaurant',
+      description: spot.description || '',
+      signature_menu: spot.signature_menu || '',
+      address: spot.address || '',
+      phone: spot.phone || '',
+      open_time: spot.open_time || '',
+      discount_percentage: spot.discount_percentage?.toString() || '',
+      special_offer: spot.special_offer || '',
+      logo_url: spot.logo_url || '',
+      images: spot.images || []
+    })
+    setLogoFile(null)
+    setImageFiles([])
+    setShowEditForm(true)
+    setShowCreateForm(false)
+  }
+
+  // 스팟 수정 취소
+  const cancelEdit = () => {
+    setEditingSpot(null)
+    setShowEditForm(false)
+    setFormData({
+      name: '',
+      category: 'restaurant',
+      description: '',
+      signature_menu: '',
+      address: '',
+      phone: '',
+      open_time: '',
+      discount_percentage: '',
+      special_offer: '',
+      logo_url: '',
+      images: []
+    })
+    setLogoFile(null)
+    setImageFiles([])
+  }
+
+  // 스팟 수정 저장
+  const updateSpot = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.address) {
+      alert('스팟명과 주소는 필수 입력 항목입니다.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      // 이미지 처리를 병렬로 실행
+      const [logoUrl, ...newImageUrls] = await Promise.all([
+        logoFile ? fileToBase64(logoFile) : Promise.resolve(formData.logo_url),
+        ...imageFiles.map(file => fileToBase64(file))
+      ])
+
+      // 기존 이미지와 새 이미지 합치기
+      const imageUrls = [...formData.images, ...newImageUrls]
+
+      const spotData = {
+        name: formData.name,
+        category: formData.category,
+        description: formData.description,
+        signature_menu: formData.signature_menu,
+        address: formData.address,
+        phone: formData.phone || null,
+        open_time: formData.open_time || null,
+        discount_percentage: formData.discount_percentage ? parseInt(formData.discount_percentage) : null,
+        special_offer: formData.special_offer || null,
+        logo_url: logoUrl,
+        images: imageUrls,
+        updated_at: new Date().toISOString()
+      }
+
+      const { error } = await (supabase as any)
+        .from('spots')
+        .update(spotData)
+        .eq('id', editingSpot.id)
+
+      if (error) {
+        console.error('스팟 수정 오류:', error)
+        alert(`스팟 수정 중 오류가 발생했습니다: ${error.message}`)
+        return
+      }
+
+      alert('제휴 스팟이 성공적으로 수정되었습니다!')
+      cancelEdit()
+      loadSpots()
+
+    } catch (error: any) {
+      console.error('스팟 수정 실패:', error)
+      alert(`스팟 수정 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // 기존 이미지 제거
+  const removeExistingImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }))
+  }
+
+  // 스팟 삭제
+  const deleteSpot = async (spotId: string, spotName: string) => {
+    if (!confirm(`"${spotName}" 스팟을 정말 삭제하시겠습니까?`)) {
+      return
+    }
+
+    try {
+      const { error } = await (supabase as any)
+        .from('spots')
+        .delete()
+        .eq('id', spotId)
+
+      if (error) {
+        console.error('스팟 삭제 오류:', error)
+        alert(`스팟 삭제 중 오류가 발생했습니다: ${error.message}`)
+        return
+      }
+
+      alert('스팟이 성공적으로 삭제되었습니다.')
+      loadSpots()
+
+    } catch (error: any) {
+      console.error('스팟 삭제 실패:', error)
+      alert(`스팟 삭제 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`)
+    }
+  }
+
+  const getCategoryText = (category: string) => {
+    switch (category) {
+      case 'restaurant': return '음식점'
+      case 'cafe': return '카페'
+      case 'fitness': return '피트니스'
+      case 'retail': return '소매점'
+      case 'service': return '서비스'
+      default: return category
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold">
+          제휴 스팟 관리
+          {showEditForm && editingSpot && (
+            <span className="text-base text-gray-400 ml-2">- {editingSpot.name} 수정 중</span>
+          )}
+        </h2>
+        <div className="flex gap-2">
+          {showEditForm ? (
+            <button
+              onClick={cancelEdit}
+              className="flex items-center justify-center px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-xl transition-colors font-semibold"
+            >
+              <X className="w-5 h-5 mr-2" />
+              수정 취소
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setShowCreateForm(!showCreateForm)
+                if (showCreateForm) {
+                  setFormData({
+                    name: '',
+                    category: 'restaurant',
+                    description: '',
+                    signature_menu: '',
+                    address: '',
+                    phone: '',
+                    open_time: '',
+                    discount_percentage: '',
+                    special_offer: '',
+                    logo_url: '',
+                    images: []
+                  })
+                  setLogoFile(null)
+                  setImageFiles([])
+                }
+              }}
+              className="flex items-center justify-center px-4 py-3 bg-[#00FF88] text-black rounded-xl hover:bg-[#00E077] transition-colors font-semibold"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              {showCreateForm ? '등록 취소' : '새 스팟 등록'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 스팟 등록 폼 */}
+      {showCreateForm && (
+        <div className="bg-gray-900 rounded-2xl p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">새 제휴 스팟 등록</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  스팟명 *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  카테고리
+                </label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                >
+                  <option value="restaurant">음식점</option>
+                  <option value="cafe">카페</option>
+                  <option value="fitness">피트니스</option>
+                  <option value="retail">소매점</option>
+                  <option value="service">서비스</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                설명
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+              />
+            </div>
+
+            {/* 로고 업로드 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                로고 이미지
+                <span className="text-xs text-gray-500 ml-2">
+                  (권장: 200x200px, 최대 50KB, PNG/JPG)
+                </span>
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleLogoChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#00FF88] file:text-black hover:file:bg-[#00E077]"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 정사각형 이미지가 가장 좋습니다. 원형으로 표시됩니다.
+              </p>
+              {logoFile && (
+                <div className="mt-2">
+                  <img
+                    src={URL.createObjectURL(logoFile)}
+                    alt="로고 미리보기"
+                    className="w-20 h-20 object-cover rounded-full border border-gray-600"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    파일 크기: {(logoFile.size / 1024).toFixed(1)}KB
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 전경사진 업로드 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                전경사진 (여러 장 가능)
+                <span className="text-xs text-gray-500 ml-2">
+                  (권장: 800x600px, 최대 200KB/장, JPG/PNG)
+                </span>
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                multiple
+                onChange={handleImagesChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#00FF88] file:text-black hover:file:bg-[#00E077]"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                📸 가로형 이미지가 좋습니다. 슬라이더로 표시됩니다.
+              </p>
+              {imageFiles.length > 0 && (
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {imageFiles.map((file, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`전경사진 ${index + 1}`}
+                        className="w-full h-20 object-cover rounded-lg border border-gray-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors"
+                      >
+                        ×
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg">
+                        {(file.size / 1024).toFixed(1)}KB
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  대표 메뉴/서비스
+                </label>
+                <input
+                  type="text"
+                  name="signature_menu"
+                  value={formData.signature_menu}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  전화번호
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                주소 *
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  운영시간
+                </label>
+                <input
+                  type="text"
+                  name="open_time"
+                  value={formData.open_time}
+                  onChange={handleInputChange}
+                  placeholder="예: 09:00-22:00"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  할인율 (%)
+                </label>
+                <input
+                  type="number"
+                  name="discount_percentage"
+                  value={formData.discount_percentage}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  특별 혜택
+                </label>
+                <input
+                  type="text"
+                  name="special_offer"
+                  value={formData.special_offer}
+                  onChange={handleInputChange}
+                  placeholder="예: 음료 1+1"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-[#00FF88] hover:bg-[#00E077] text-black rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? '저장 중...' : '등록하기'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 스팟 수정 폼 */}
+      {showEditForm && editingSpot && (
+        <div className="bg-gray-900 rounded-2xl p-6 mb-6 border-2 border-blue-500">
+          <h3 className="text-lg font-semibold mb-4">제휴 스팟 수정 - {editingSpot.name}</h3>
+          <form onSubmit={updateSpot} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  스팟명 *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  카테고리
+                </label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                >
+                  <option value="restaurant">음식점</option>
+                  <option value="cafe">카페</option>
+                  <option value="fitness">피트니스</option>
+                  <option value="retail">소매점</option>
+                  <option value="service">서비스</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                설명
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+              />
+            </div>
+
+            {/* 기존 로고 표시 및 새 로고 업로드 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                로고 이미지
+                <span className="text-xs text-gray-500 ml-2">
+                  (권장: 200x200px, 최대 50KB, PNG/JPG)
+                </span>
+              </label>
+              
+              {/* 기존 로고 */}
+              {formData.logo_url && !logoFile && (
+                <div className="mb-2">
+                  <p className="text-xs text-gray-400 mb-1">현재 로고:</p>
+                  <img
+                    src={formData.logo_url}
+                    alt="현재 로고"
+                    className="w-20 h-20 object-cover rounded-full border border-gray-600"
+                  />
+                </div>
+              )}
+              
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleLogoChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#00FF88] file:text-black hover:file:bg-[#00E077]"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                💡 새 이미지를 선택하면 기존 로고가 교체됩니다.
+              </p>
+              
+              {/* 새 로고 미리보기 */}
+              {logoFile && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-400 mb-1">새 로고 미리보기:</p>
+                  <img
+                    src={URL.createObjectURL(logoFile)}
+                    alt="새 로고 미리보기"
+                    className="w-20 h-20 object-cover rounded-full border border-gray-600"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    파일 크기: {(logoFile.size / 1024).toFixed(1)}KB
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 기존 전경사진 및 새 전경사진 업로드 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                전경사진
+                <span className="text-xs text-gray-500 ml-2">
+                  (권장: 800x600px, 최대 200KB/장, JPG/PNG)
+                </span>
+              </label>
+              
+              {/* 기존 전경사진들 */}
+              {formData.images && formData.images.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-gray-400 mb-2">현재 전경사진들:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {formData.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`기존 전경사진 ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border border-gray-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExistingImage(index)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                multiple
+                onChange={handleImagesChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#00FF88] file:text-black hover:file:bg-[#00E077]"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                📸 새 이미지를 추가할 수 있습니다. 기존 이미지는 유지됩니다.
+              </p>
+              
+              {/* 새 전경사진 미리보기 */}
+              {imageFiles.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-400 mb-2">추가할 전경사진들:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {imageFiles.map((file, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`새 전경사진 ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border border-gray-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors"
+                        >
+                          ×
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg">
+                          {(file.size / 1024).toFixed(1)}KB
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  대표 메뉴/서비스
+                </label>
+                <input
+                  type="text"
+                  name="signature_menu"
+                  value={formData.signature_menu}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  전화번호
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                주소 *
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  운영시간
+                </label>
+                <input
+                  type="text"
+                  name="open_time"
+                  value={formData.open_time}
+                  onChange={handleInputChange}
+                  placeholder="예: 09:00-22:00"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  할인율 (%)
+                </label>
+                <input
+                  type="number"
+                  name="discount_percentage"
+                  value={formData.discount_percentage}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  특별 혜택
+                </label>
+                <input
+                  type="text"
+                  name="special_offer"
+                  value={formData.special_offer}
+                  onChange={handleInputChange}
+                  placeholder="예: 음료 1+1"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? '저장 중...' : '수정 완료'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* 등록된 스팟 목록 */}
+      <div className="bg-gray-900 rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+          <h3 className="text-lg font-semibold">등록된 제휴 스팟</h3>
+          <button
+            onClick={loadSpots}
+            disabled={loading}
+            className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            {loading ? '로딩...' : '새로고침'}
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
+            <div className="text-gray-400">스팟 목록을 불러오는 중...</div>
+          </div>
+        ) : spots.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <Store className="w-12 h-12 mx-auto mb-2 text-gray-600" />
+            <div>등록된 제휴 스팟이 없습니다.</div>
+            <div className="text-sm text-gray-600 mt-1">
+              위의 "새 스팟 등록" 버튼을 눌러 첫 번째 스팟을 등록해보세요!
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-800">
+            {spots.map((spot) => (
+              <div key={spot.id} className="p-4 hover:bg-gray-800/50 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-semibold text-white text-lg">{spot.name}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-medium">
+                        {getCategoryText(spot.category)}
+                      </span>
+                      {spot.discount_percentage && (
+                        <span className="px-2 py-1 bg-green-900 text-green-300 rounded text-xs font-medium">
+                          {spot.discount_percentage}% 할인
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => startEditSpot(spot)}
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-blue-400 hover:text-blue-300"
+                      title="스팟 수정"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteSpot(spot.id, spot.name)}
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-red-400 hover:text-red-300"
+                      title="스팟 삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                {spot.description && (
+                  <p className="text-gray-400 text-sm mb-2">{spot.description}</p>
+                )}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-300">
+                  <div>📍 {spot.address}</div>
+                  {spot.phone && <div>📞 {spot.phone}</div>}
+                  {spot.open_time && <div>🕒 {spot.open_time}</div>}
+                  {spot.signature_menu && <div>🍽️ {spot.signature_menu}</div>}
+                </div>
+                
+                {spot.special_offer && (
+                  <div className="mt-2 p-2 bg-[#00FF88]/10 border border-[#00FF88]/20 rounded-lg">
+                    <span className="text-[#00FF88] text-sm font-medium">🎁 {spot.special_offer}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

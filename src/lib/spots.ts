@@ -11,12 +11,15 @@ export interface SpotWithDistance {
   latitude: number
   longitude: number
   phone: string | null
-  open_time: string
+  open_time: string | null
   discount_percentage: number | null
   special_offer: string | null
   is_active: boolean | null
   created_at: string | null
   updated_at: string | null
+  logo_url: string | null
+  images: string[] | null
+  thumbnail_image: string | null
   distance: number
 }
 
