@@ -1,10 +1,38 @@
 'use client'
 
-import { ArrowLeft, Info, Heart, Github, Mail, Star } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, Info, Heart, Mail, Star, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { submitInquiry } from '@/lib/inquiries'
+import Image from 'next/image'
 
 export default function AboutPage() {
   const router = useRouter()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [message, setMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    
+    try {
+      await submitInquiry({
+        name: '사용자',
+        email: 'user@runspot.com',
+        subject: '앱 문의',
+        message: message
+      })
+      alert('문의가 성공적으로 전송되었습니다!')
+      setIsModalOpen(false)
+      setMessage('')
+    } catch (error) {
+      console.error('Error submitting inquiry:', error)
+      alert('문의 전송에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -25,8 +53,14 @@ export default function AboutPage() {
       <div className="px-4 py-6 space-y-6">
         {/* 앱 정보 */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-[#00FF88] rounded-3xl flex items-center justify-center mx-auto mb-4 neon-glow">
-            <span className="text-3xl">🏃‍♂️</span>
+          <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-4 neon-glow overflow-hidden">
+            <Image 
+              src="/runspot.jpg" 
+              alt="RunSpot Logo" 
+              width={80} 
+              height={80}
+              className="w-full h-full object-cover rounded-3xl"
+            />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">RunSpot Seoul</h2>
           <p className="text-gray-400 mb-1">버전 1.0.0</p>
@@ -53,23 +87,19 @@ export default function AboutPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-[#00FF88] rounded-full"></div>
-              <span className="text-gray-300">🗺️ 인터랙티브 지도와 코스 탐색</span>
+              <span className="text-gray-300">인터랙티브 지도와 코스 탐색</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-[#00FF88] rounded-full"></div>
-              <span className="text-gray-300">📍 GPS 실시간 추적</span>
+              <span className="text-gray-300">GPS 실시간 추적</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-[#00FF88] rounded-full"></div>
-              <span className="text-gray-300">⭐ 코스 리뷰 및 평점 시스템</span>
+              <span className="text-gray-300">코스 리뷰 및 평점 시스템</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 bg-[#00FF88] rounded-full"></div>
-              <span className="text-gray-300">📊 개인 런닝 통계 및 기록</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-[#00FF88] rounded-full"></div>
-              <span className="text-gray-300">🌙 다크 테마 디자인</span>
+              <span className="text-gray-300">개인 런닝 통계 및 기록</span>
             </div>
           </div>
         </div>
@@ -119,11 +149,10 @@ export default function AboutPage() {
             </div>
             
             <div className="flex gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors">
-                <Github className="w-4 h-4" />
-                <span className="text-sm">GitHub</span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors">
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors"
+              >
                 <Mail className="w-4 h-4" />
                 <span className="text-sm">문의하기</span>
               </button>
@@ -136,17 +165,26 @@ export default function AboutPage() {
           <h3 className="text-lg font-semibold mb-4">라이선스</h3>
           
           <div className="space-y-3">
-            <button className="w-full text-left p-3 hover:bg-gray-800/50 rounded-xl transition-colors">
+            <button 
+              onClick={() => router.push('/profile/about/licenses')}
+              className="w-full text-left p-3 hover:bg-gray-800/50 rounded-xl transition-colors"
+            >
               <p className="text-white font-medium">오픈소스 라이선스</p>
               <p className="text-sm text-gray-400">사용된 오픈소스 라이브러리 정보</p>
             </button>
             
-            <button className="w-full text-left p-3 hover:bg-gray-800/50 rounded-xl transition-colors">
+            <button 
+              onClick={() => router.push('/profile/about/privacy')}
+              className="w-full text-left p-3 hover:bg-gray-800/50 rounded-xl transition-colors"
+            >
               <p className="text-white font-medium">개인정보 처리방침</p>
               <p className="text-sm text-gray-400">개인정보 수집 및 이용에 대한 정책</p>
             </button>
             
-            <button className="w-full text-left p-3 hover:bg-gray-800/50 rounded-xl transition-colors">
+            <button 
+              onClick={() => router.push('/profile/about/terms')}
+              className="w-full text-left p-3 hover:bg-gray-800/50 rounded-xl transition-colors"
+            >
               <p className="text-white font-medium">서비스 이용약관</p>
               <p className="text-sm text-gray-400">앱 사용에 관한 약관 및 조건</p>
             </button>
@@ -172,16 +210,66 @@ export default function AboutPage() {
         {/* 저작권 */}
         <div className="text-center py-6">
           <p className="text-sm text-gray-500">
-            © 2024 RunSpot Seoul. All rights reserved.
+            © 2025 RunSpot Seoul. All rights reserved.
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            Made with ❤️ in Seoul
+            Made with FRC in Seoul
           </p>
         </div>
 
         {/* 하단 여백 */}
         <div className="h-20"></div>
       </div>
+
+      {/* 문의하기 모달 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md border border-gray-800">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white">문의하기</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  문의 내용 *
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  required
+                  rows={6}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-[#00FF88] transition-colors resize-none"
+                  placeholder="문의 내용을 자세히 입력해주세요"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition-colors font-medium"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-[#00FF88] text-black py-3 rounded-xl hover:bg-[#00E077] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? '전송 중...' : '문의 전송'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

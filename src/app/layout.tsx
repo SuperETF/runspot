@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+import KakaoScript from "@/components/common/KakaoScript";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +31,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY || ''
+  console.log('🔧 Layout에서 Kakao API 키 확인:', kakaoApiKey ? `${kakaoApiKey.substring(0, 10)}...` : '없음')
+  
   return (
     <html lang="ko" className="dark">
       <head>
@@ -40,14 +43,16 @@ export default function RootLayout({
           rel="stylesheet" 
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" 
         />
+        {/* 직접 Kakao Maps SDK 로드 */}
+        <script 
+          type="text/javascript" 
+          src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoApiKey}&autoload=false`}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <Script
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&autoload=false`}
-          strategy="beforeInteractive"
-        />
+        <KakaoScript apiKey={kakaoApiKey} />
         {children}
       </body>
     </html>

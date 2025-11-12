@@ -1,33 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Bookmark, MapPin, Clock, Star, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bookmark, MapPin, Clock, Star, Trash2, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useBookmarks } from '@/hooks/useBookmarks'
 
 export default function SavedPage() {
   const router = useRouter()
-  const [savedCourses, setSavedCourses] = useState([
-    {
-      id: '1',
-      name: '한강공원 여의도 코스',
-      area: '여의도',
-      distance: 5.2,
-      duration: 35,
-      difficulty: 'easy',
-      rating: 4.8,
-      savedAt: '2024-01-15'
-    },
-    {
-      id: '2',
-      name: '남산 순환로',
-      area: '중구',
-      distance: 3.8,
-      duration: 45,
-      difficulty: 'medium',
-      rating: 4.6,
-      savedAt: '2024-01-10'
-    }
-  ])
+  const { bookmarks, loading, error, removeFromBookmarks } = useBookmarks()
 
   const getDifficultyText = (difficulty: string) => {
     switch (difficulty) {
@@ -47,8 +27,11 @@ export default function SavedPage() {
     }
   }
 
-  const removeSavedCourse = (courseId: string) => {
-    setSavedCourses(prev => prev.filter(course => course.id !== courseId))
+  const removeSavedCourse = async (courseId: string) => {
+    const success = await removeFromBookmarks(courseId)
+    if (!success && error) {
+      alert(error)
+    }
   }
 
   return (
@@ -68,17 +51,35 @@ export default function SavedPage() {
       </div>
 
       <div className="px-4 py-6">
+        {/* 로딩 상태 */}
+        {loading && (
+          <div className="flex justify-center items-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-[#00FF88]" />
+          </div>
+        )}
+
+        {/* 에러 상태 */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mb-6">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* 저장된 코스 개수 */}
-        <div className="mb-6">
-          <p className="text-gray-400 text-sm">
-            총 <span className="text-[#00FF88] font-semibold">{savedCourses.length}개</span>의 코스를 저장했습니다
-          </p>
-        </div>
+        {!loading && (
+          <div className="mb-6">
+            <p className="text-gray-400 text-sm">
+              총 <span className="text-[#00FF88] font-semibold">{bookmarks.length}개</span>의 코스를 저장했습니다
+            </p>
+          </div>
+        )}
 
         {/* 저장된 코스 목록 */}
-        {savedCourses.length > 0 ? (
+        {!loading && bookmarks.length > 0 ? (
           <div className="space-y-4">
-            {savedCourses.map((course, index) => (
+            {bookmarks.map((bookmark, index) => {
+              const course = bookmark.courses
+              return (
               <div 
                 key={course.id}
                 className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 hover:border-gray-700 transition-all duration-300 animate-fade-in-up"
@@ -93,27 +94,27 @@ export default function SavedPage() {
                     <p className="text-sm text-gray-400 mb-2">{course.area}</p>
                     
                     {/* 코스 정보 */}
-                    <div className="flex items-center gap-4 text-sm mb-3">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4 text-[#00FF88]" />
+                    <div className="flex items-center gap-3 text-sm mb-3 flex-wrap">
+                      <div className="flex items-center gap-1 whitespace-nowrap">
+                        <MapPin className="w-4 h-4 text-[#00FF88] flex-shrink-0" />
                         <span className="text-[#00FF88] font-medium">{course.distance}km</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4 text-gray-400" />
+                      <div className="flex items-center gap-1 whitespace-nowrap">
+                        <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         <span className="text-gray-300">{course.duration}분</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="text-gray-300">{course.rating}</span>
+                      <div className="flex items-center gap-1 whitespace-nowrap">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current flex-shrink-0" />
+                        <span className="text-gray-300">{course.rating_avg}</span>
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getDifficultyColor(course.difficulty)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0 ${getDifficultyColor(course.difficulty)}`}>
                         {getDifficultyText(course.difficulty)}
                       </span>
                     </div>
 
                     {/* 저장 날짜 */}
                     <p className="text-xs text-gray-500">
-                      {new Date(course.savedAt).toLocaleDateString('ko-KR')} 저장
+                      {new Date(bookmark.created_at).toLocaleDateString('ko-KR')} 저장
                     </p>
                   </div>
 
@@ -140,7 +141,7 @@ export default function SavedPage() {
                   </button>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         ) : (
           /* 빈 상태 */

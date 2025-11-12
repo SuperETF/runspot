@@ -1,27 +1,5 @@
 import { GPSCoordinate } from '@/types/database'
 
-// Kakao Maps API 타입 정의
-declare global {
-  interface Window {
-    kakao: {
-      maps: {
-        Map: new (container: HTMLElement, options: any) => any
-        LatLng: new (lat: number, lng: number) => any
-        Marker: new (options: any) => any
-        Polyline: new (options: any) => any
-        MarkerImage: new (src: string, size: any, options?: any) => any
-        Size: new (width: number, height: number) => any
-        Point: new (x: number, y: number) => any
-        InfoWindow: new (options: any) => any
-        event: {
-          addListener: (target: any, type: string, handler: Function) => void
-        }
-        load: (callback: () => void) => void
-      }
-    }
-  }
-}
-
 // 거리 계산 함수 (Haversine formula)
 export const calculateDistance = (
   point1: GPSCoordinate,
@@ -93,7 +71,7 @@ export const getBounds = (points: GPSCoordinate[]) => {
 
 // Kakao Maps API 로드 확인
 export const isKakaoMapsLoaded = (): boolean => {
-  return typeof window !== 'undefined' && !!window.kakao && !!window.kakao.maps
+  return typeof window !== 'undefined' && !!(window as any).kakao && !!(window as any).kakao.maps
 }
 
 // Kakao Maps API 로드 대기
@@ -122,7 +100,7 @@ export const waitForKakaoMaps = (): Promise<void> => {
 // 좌표를 Kakao Maps LatLng 객체로 변환
 export const toKakaoLatLng = (coord: GPSCoordinate) => {
   if (!isKakaoMapsLoaded()) return null
-  return new window.kakao.maps.LatLng(coord.lat, coord.lng)
+  return new (window as any).kakao.maps.LatLng(coord.lat, coord.lng)
 }
 
 // Kakao Maps LatLng 객체를 좌표로 변환

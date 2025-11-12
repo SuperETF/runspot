@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 export async function getUserProfile(userId: string) {
   try {
     const { data, error } = await supabase
-      .from('user_profile_view')
+      .from('users')
       .select('*')
       .eq('id', userId)
       .single()

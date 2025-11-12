@@ -194,4 +194,30 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  
+  /* 스크롤바 숨기기 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+
+  /* 프로필 마커만 투명하게 처리 */
+  .kakao-map-marker-custom {
+    background: rgba(255, 255, 255, 0) !important;
+    border: rgba(255, 255, 255, 0) !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 1 !important;
+  }
+
+  /* 프로필 마커 내부 요소는 원래대로 */
+  .kakao-map-marker-custom * {
+    background: initial !important;
+    border-color: initial !important;
+  }
 }

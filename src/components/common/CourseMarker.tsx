@@ -6,10 +6,11 @@ import { GPSCoordinate } from '@/types/database'
 
 interface CourseMarkerProps {
   position: GPSCoordinate
-  type?: 'start' | 'end' | 'waypoint' | 'facility' | 'current'
+  type?: 'start' | 'end' | 'waypoint' | 'facility' | 'current' | 'profile'
   title?: string
   content?: string
   onClick?: () => void
+  profileImage?: string
 }
 
 const CourseMarker = ({
@@ -17,7 +18,8 @@ const CourseMarker = ({
   type = 'waypoint',
   title,
   content,
-  onClick
+  onClick,
+  profileImage
 }: CourseMarkerProps) => {
   // 마커 이미지 URL 생성
   const getMarkerImageSrc = (markerType: string): string => {
@@ -37,6 +39,57 @@ const CourseMarker = ({
     }
   }
 
+  // 프로필 타입일 때는 커스텀 마커 사용
+  if (type === 'profile') {
+    return (
+      <MapMarker
+        position={position}
+        title=""
+        onClick={onClick}
+      >
+        <div 
+          className="relative kakao-map-marker-custom"
+          style={{
+            background: 'transparent !important',
+            border: 'none !important',
+            padding: '0 !important',
+            margin: '0 !important',
+            boxShadow: 'none !important',
+            borderRadius: '0 !important',
+            opacity: '1 !important',
+            transform: 'translate(-50%, -50%)',
+            position: 'relative',
+            zIndex: 1000
+          }}
+        >
+          {profileImage ? (
+            <div className="w-14 h-14 rounded-full border-3 border-[#00FF88] shadow-lg overflow-hidden bg-white relative">
+              <img
+                src={profileImage}
+                alt="내 프로필"
+                className="w-full h-full object-cover"
+                style={{ 
+                  borderRadius: '50%',
+                  display: 'block'
+                }}
+              />
+              {/* 온라인 상태 표시 점 */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#00FF88] rounded-full border-2 border-white shadow-sm"></div>
+            </div>
+          ) : (
+            <div className="w-14 h-14 rounded-full border-3 border-[#00FF88] bg-[#00FF88] flex items-center justify-center shadow-lg relative">
+              <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+              {/* 온라인 상태 표시 점 */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full border-2 border-[#00FF88] shadow-sm"></div>
+            </div>
+          )}
+        </div>
+      </MapMarker>
+    )
+  }
+
   const imageSrc = getMarkerImageSrc(type)
 
   return (
@@ -47,32 +100,10 @@ const CourseMarker = ({
         size: { width: 24, height: 35 },
         options: { offset: { x: 12, y: 35 } }
       }}
-      title={title}
+      title="12312"
       onClick={onClick}
-    >
-      {content && (
-        <div style={{
-          padding: '8px 12px',
-          background: '#1a1a1a',
-          color: '#ffffff',
-          borderRadius: '8px',
-          fontSize: '12px',
-          minWidth: '120px',
-          border: '1px solid #333'
-        }}>
-          {title && (
-            <div style={{
-              fontWeight: 'bold',
-              marginBottom: '4px',
-              color: '#00FF88'
-            }}>
-              {title}
-            </div>
-          )}
-          <div>{content}</div>
-        </div>
-      )}
-    </MapMarker>
+    />
+    
   )
 }
 
