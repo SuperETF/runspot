@@ -1,0 +1,298 @@
+/* SafeArea CSS 유틸리티 클래스 */
+
+/* CSS 환경 변수 기본값 설정 */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  
+  /* 뷰포트 변수 */
+  --viewport-width: 100vw;
+  --viewport-height: 100vh;
+  --is-landscape: 0;
+  --is-tablet: 0;
+  
+  /* 동적 뷰포트 단위 (iOS Safari 대응) */
+  --vh: 1vh;
+  --vw: 1vw;
+}
+
+/* iOS Safari의 동적 뷰포트 높이 문제 해결 */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --vh: calc(var(--viewport-height) * 0.01);
+  }
+}
+
+/* SafeArea 패딩 유틸리티 클래스 */
+.safe-top {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-left {
+  padding-left: var(--safe-area-inset-left);
+}
+
+.safe-right {
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-x {
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+.safe-y {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-all {
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+/* SafeArea 마진 유틸리티 클래스 */
+.safe-mt {
+  margin-top: var(--safe-area-inset-top);
+}
+
+.safe-mb {
+  margin-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-ml {
+  margin-left: var(--safe-area-inset-left);
+}
+
+.safe-mr {
+  margin-right: var(--safe-area-inset-right);
+}
+
+.safe-mx {
+  margin-left: var(--safe-area-inset-left);
+  margin-right: var(--safe-area-inset-right);
+}
+
+.safe-my {
+  margin-top: var(--safe-area-inset-top);
+  margin-bottom: var(--safe-area-inset-bottom);
+}
+
+.safe-m-all {
+  margin-top: var(--safe-area-inset-top);
+  margin-bottom: var(--safe-area-inset-bottom);
+  margin-left: var(--safe-area-inset-left);
+  margin-right: var(--safe-area-inset-right);
+}
+
+/* 전체 화면 높이 (SafeArea 고려) */
+.h-screen-safe {
+  height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+}
+
+.min-h-screen-safe {
+  min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+}
+
+.max-h-screen-safe {
+  max-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+}
+
+/* 동적 뷰포트 높이 (iOS Safari 대응) */
+.h-screen-dynamic {
+  height: calc(var(--vh, 1vh) * 100);
+}
+
+.min-h-screen-dynamic {
+  min-height: calc(var(--vh, 1vh) * 100);
+}
+
+.max-h-screen-dynamic {
+  max-height: calc(var(--vh, 1vh) * 100);
+}
+
+/* 네비게이션과 탭바를 고려한 높이 */
+.h-content-area {
+  height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom) - 44px - 49px);
+}
+
+@media (min-width: 768px) {
+  .h-content-area {
+    height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom) - 64px - 64px);
+  }
+}
+
+/* 반응형 유틸리티 */
+.landscape-only {
+  display: none;
+}
+
+.portrait-only {
+  display: block;
+}
+
+@media (orientation: landscape) {
+  .landscape-only {
+    display: block;
+  }
+  
+  .portrait-only {
+    display: none;
+  }
+}
+
+/* 태블릿 전용 스타일 */
+.tablet-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .tablet-only {
+    display: block;
+  }
+}
+
+/* 모바일 전용 스타일 */
+.mobile-only {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+}
+
+/* iOS 전용 스타일 */
+@supports (-webkit-touch-callout: none) {
+  .ios-only {
+    display: block;
+  }
+  
+  .non-ios {
+    display: none;
+  }
+}
+
+.ios-only {
+  display: none;
+}
+
+.non-ios {
+  display: block;
+}
+
+/* 노치/다이나믹 아일랜드 대응 */
+@media (max-width: 430px) and (min-height: 800px) {
+  /* iPhone X 이후 기기 감지 */
+  .notch-device .safe-top {
+    padding-top: max(var(--safe-area-inset-top), 44px);
+  }
+  
+  .notch-device .safe-bottom {
+    padding-bottom: max(var(--safe-area-inset-bottom), 34px);
+  }
+}
+
+/* 가로 모드에서 좌우 SafeArea */
+@media (orientation: landscape) {
+  .landscape-safe-x {
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
+  }
+  
+  .landscape-safe-left {
+    padding-left: var(--safe-area-inset-left);
+  }
+  
+  .landscape-safe-right {
+    padding-right: var(--safe-area-inset-right);
+  }
+}
+
+/* 태블릿 가로 모드 레이아웃 */
+@media (min-width: 768px) and (orientation: landscape) {
+  .tablet-landscape-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 2rem;
+  }
+  
+  .tablet-landscape-sidebar {
+    position: sticky;
+    top: var(--safe-area-inset-top);
+    height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+}
+
+/* 애니메이션 최적화 */
+@media (prefers-reduced-motion: reduce) {
+  .safe-area-layout,
+  .safe-area-layout * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 고대비 모드 대응 */
+@media (prefers-contrast: high) {
+  .safe-area-layout {
+    border: 1px solid;
+  }
+}
+
+/* 다크 모드 대응 */
+@media (prefers-color-scheme: dark) {
+  .safe-area-layout {
+    color-scheme: dark;
+  }
+}
+
+/* 터치 디바이스 최적화 */
+@media (hover: none) and (pointer: coarse) {
+  .safe-area-layout button,
+  .safe-area-layout [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* 키보드 네비게이션 지원 */
+.safe-area-layout *:focus-visible {
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+
+/* 스크롤 최적화 */
+.safe-area-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* 텍스트 선택 최적화 */
+.safe-area-layout {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 탭 하이라이트 제거 (모바일) */
+.safe-area-layout * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 사용자 선택 방지 (UI 요소) */
+.safe-area-layout button,
+.safe-area-layout [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}

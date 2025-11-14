@@ -5,7 +5,7 @@ import { Clock, Gift, X } from 'lucide-react'
 
 interface RunningLog {
   id: string
-  course_name: string
+  course_id: string | null
   completed_at: string
   expires_at: string
   authentication_count: number
@@ -33,7 +33,7 @@ export default function AuthenticationBanner({ userId }: AuthenticationBannerPro
         .from('running_logs')
         .select(`
           id,
-          course_name,
+          course_id,
           completed_at,
           expires_at,
           authentication_count,
@@ -126,7 +126,7 @@ export default function AuthenticationBanner({ userId }: AuthenticationBannerPro
             <div className="flex-1 text-white">
               <h3 className="font-bold text-sm mb-1">🎉 인증 혜택 사용 가능!</h3>
               <p className="text-xs opacity-90 mb-2">
-                <strong>{activeLog.course_name}</strong> 완주 인증으로
+                <strong>런닝 코스</strong> 완주 인증으로
               </p>
               
               <div className="flex items-center gap-4 text-xs">

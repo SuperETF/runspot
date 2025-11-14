@@ -112,13 +112,12 @@ export interface Database {
           id: string
           user_id: string
           course_id: string | null
-          course_name: string
           distance: number
           duration: number
-          pace: number
+          avg_speed: number
           calories: number
+          gps_path: any | null
           completed_at: string
-          gps_data: any | null
           created_at: string | null
           authentication_count: number | null
           expires_at: string | null
@@ -127,12 +126,11 @@ export interface Database {
           id?: string
           user_id: string
           course_id: string | null
-          course_name: string
           distance: number
           duration: number
           avg_speed: number
           calories: number
-          gps_path: Array<{ lat: number; lng: number; timestamp: string }>
+          gps_path?: any | null
           completed_at?: string
           authentication_count?: number | null
           expires_at?: string | null
@@ -145,7 +143,7 @@ export interface Database {
           duration?: number
           avg_speed?: number
           calories?: number
-          gps_path?: Array<{ lat: number; lng: number; timestamp: string }>
+          gps_path?: any | null
           completed_at?: string
           authentication_count?: number | null
           expires_at?: string | null

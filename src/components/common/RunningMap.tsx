@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { GPSCoordinate } from '@/types/database'
 import LocationPermission from './LocationPermission'
 import { Navigation } from 'lucide-react'
+import { useGPSTracking } from '@/hooks/useGPSTracking'
+import { useKakaoMap } from '@/hooks/useKakaoMap'
 
 // GPS 포인트 타입 (타임스탬프 포함)
 interface GPSPoint {
@@ -38,42 +40,42 @@ export default function RunningMap({
   passedCheckpoints = [],
   isCompleted = false
 }: RunningMapProps) {
-  const mapContainer = useRef<HTMLDivElement>(null)
-  const [map, setMap] = useState<any>(null)
-  const [currentMarker, setCurrentMarker] = useState<any>(null)
-  const [polyline, setPolyline] = useState<any>(null)
-  const [coursePolyline, setCoursePolyline] = useState<any>(null)
-  const [startPointMarker, setStartPointMarker] = useState<any>(null)
-  const [gpsPath, setGpsPath] = useState<GPSPoint[]>([])
-  const [watchId, setWatchId] = useState<number | null>(null)
-  const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown')
-  const [initialPosition, setInitialPosition] = useState<GeolocationPosition | null>(null)
+  // 최적화된 훅 사용
+  const { mapContainer, map, isMapReady, initializeMap, addMarker, addPolyline, addInfoWindow, setBounds, clearAllMapObjects } = useKakaoMap()
+  const { gpsPath, currentLocation, totalDistance, error: gpsError } = useGPSTracking(isRunning, {
+    onLocationUpdate,
+    onDistanceUpdate
+  })
 
   // 카카오맵 초기화
   useEffect(() => {
     const initializeMap = (position?: GeolocationPosition) => {
-      if (!(window as any).kakao || !(window as any).kakao.maps || !mapContainer.current) return
+      if (!(window as any).kakao?.maps?.LatLng || !mapContainer.current) return
 
-      // 위치 정보가 있으면 해당 위치를, 없으면 서울 중심을 사용
-      const lat = position ? position.coords.latitude : 37.5665
-      const lng = position ? position.coords.longitude : 126.9780
+      try {
+        // 위치 정보가 있으면 해당 위치를, 없으면 서울 중심을 사용
+        const lat = position ? position.coords.latitude : 37.5665
+        const lng = position ? position.coords.longitude : 126.9780
 
-      const options = {
-        center: new (window as any).kakao.maps.LatLng(lat, lng),
-        level: 3
-      }
+        const options = {
+          center: new (window as any).kakao.maps.LatLng(lat, lng),
+          level: 3
+        }
 
-      const kakaoMap = new (window as any).kakao.maps.Map(mapContainer.current, options)
-      setMap(kakaoMap)
+        const kakaoMap = new (window as any).kakao.maps.Map(mapContainer.current, options)
+        setMap(kakaoMap)
 
-      // 위치 정보가 있으면 마커 생성
-      if (position) {
-        const locPosition = new (window as any).kakao.maps.LatLng(lat, lng)
-        const marker = new (window as any).kakao.maps.Marker({
-          position: locPosition,
-          map: kakaoMap
-        })
-        setCurrentMarker(marker)
+        // 위치 정보가 있으면 마커 생성
+        if (position) {
+          const locPosition = new (window as any).kakao.maps.LatLng(lat, lng)
+          const marker = new (window as any).kakao.maps.Marker({
+            position: locPosition,
+            map: kakaoMap
+          })
+          setCurrentMarker(marker)
+        }
+      } catch (error) {
+        console.error('카카오맵 초기화 중 오류:', error)
       }
     }
 
@@ -243,28 +245,102 @@ export default function RunningMap({
   }
 
   // 경로선 업데이트
-  const updatePolyline = (path: GPSPoint[]) => {
-    if (!map || !(window as any).kakao || !(window as any).kakao.maps || path.length < 2) return
+  const updatePolyline = useCallback((path: GPSPoint[]) => {
+    if (!map || !(window as any).kakao?.maps?.LatLng || path.length < 2) return
 
-    // 기존 경로선 제거
-    if (polyline) {
-      polyline.setMap(null)
+    try {
+      // 기존 경로선 제거
+      if (polyline) {
+        polyline.setMap(null)
+      }
+
+      // 새 경로선 생성
+      const linePath = path.map(point => new (window as any).kakao.maps.LatLng(point.lat, point.lng))
+      
+      const newPolyline = new (window as any).kakao.maps.Polyline({
+        path: linePath,
+        strokeWeight: 5,
+        strokeColor: '#00FF88',
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid'
+      })
+
+      newPolyline.setMap(map)
+      setPolyline(newPolyline)
+    } catch (error) {
+      console.error('경로선 업데이트 중 오류:', error)
+    }
+  }, [map])
+
+  // 코스 경로 표시
+  const displayCourseRoute = useCallback(() => {
+    if (!map || !courseRoute || courseRoute.length < 2 || !(window as any).kakao?.maps?.LatLng) return
+
+    // 기존 코스 경로선 제거
+    if (coursePolyline) {
+      coursePolyline.setMap(null)
     }
 
-    // 새 경로선 생성
-    const linePath = path.map(point => new (window as any).kakao.maps.LatLng(point.lat, point.lng))
-    
-    const newPolyline = new (window as any).kakao.maps.Polyline({
-      path: linePath,
-      strokeWeight: 5,
-      strokeColor: '#00FF88',
-      strokeOpacity: 0.8,
-      strokeStyle: 'solid'
-    })
+    try {
+      // 코스 경로선 생성
+      const coursePath = courseRoute.map(point => 
+        new (window as any).kakao.maps.LatLng(point.lat, point.lng)
+      )
+      
+      const newCoursePolyline = new (window as any).kakao.maps.Polyline({
+        path: coursePath,
+        strokeWeight: 6,
+        strokeColor: '#FF6B35', // 주황색으로 코스 경로 구분
+        strokeOpacity: 0.7,
+        strokeStyle: 'shortdash' // 점선으로 표시
+      })
 
-    newPolyline.setMap(map)
-    setPolyline(newPolyline)
-  }
+      newCoursePolyline.setMap(map)
+      setCoursePolyline(newCoursePolyline)
+
+      // 시작점 마커 표시
+      if (showStartPoint && courseRoute.length > 0) {
+        const startPoint = courseRoute[0]
+        const startPosition = new (window as any).kakao.maps.LatLng(startPoint.lat, startPoint.lng)
+        
+        // 기존 시작점 마커 제거
+        if (startPointMarker) {
+          startPointMarker.setMap(null)
+        }
+
+        const marker = new (window as any).kakao.maps.Marker({
+          position: startPosition,
+          map: map
+        })
+
+        // 시작점 정보창
+        const infoWindow = new (window as any).kakao.maps.InfoWindow({
+          content: '<div style="padding:8px 12px;font-size:14px;font-weight:bold;color:#000;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">🏁 시작점</div>'
+        })
+        
+        infoWindow.open(map, marker)
+        setStartPointMarker(marker)
+      }
+
+      // 지도 범위를 코스 전체가 보이도록 조정
+      if (courseRoute.length > 0) {
+        const bounds = new (window as any).kakao.maps.LatLngBounds()
+        courseRoute.forEach(point => {
+          bounds.extend(new (window as any).kakao.maps.LatLng(point.lat, point.lng))
+        })
+        map.setBounds(bounds)
+      }
+    } catch (error) {
+      console.error('코스 경로 표시 중 오류:', error)
+    }
+  }, [map, courseRoute, showStartPoint])
+
+  // 코스 경로가 변경될 때마다 표시 업데이트
+  useEffect(() => {
+    if (map && courseRoute && courseRoute.length > 0) {
+      displayCourseRoute()
+    }
+  }, [map, courseRoute, displayCourseRoute])
 
   // GPS 추적 시작/중지
   useEffect(() => {
@@ -290,15 +366,11 @@ export default function RunningMap({
             accuracy
           }
 
-          setGpsPath(prev => {
-            const updated = [...prev, newPoint]
-            updatePolyline(updated)
-            return updated
-          })
+          setGpsPath(prev => [...prev, newPoint])
 
           // 현재 위치 마커 업데이트
-          const moveLatLon = new (window as any).kakao.maps.LatLng(lat, lng)
-          if (currentMarker) {
+          if ((window as any).kakao?.maps?.LatLng && currentMarker) {
+            const moveLatLon = new (window as any).kakao.maps.LatLng(lat, lng)
             currentMarker.setPosition(moveLatLon)
           }
         },
@@ -326,7 +398,14 @@ export default function RunningMap({
         navigator.geolocation.clearWatch(watchId)
       }
     }
-  }, [isRunning, map, currentMarker, gpsPath, watchId, onLocationUpdate, onDistanceUpdate])
+  }, [isRunning, map, currentMarker, watchId, onLocationUpdate, onDistanceUpdate])
+
+  // GPS 경로가 업데이트될 때 polyline 업데이트
+  useEffect(() => {
+    if (gpsPath.length >= 2) {
+      updatePolyline(gpsPath)
+    }
+  }, [gpsPath, updatePolyline])
 
   // 총 거리 계산 (Haversine 공식)
   const calculateTotalDistance = (path: GPSPoint[]): number => {

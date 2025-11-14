@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, MapPin, Play, Bookmark, User, Navigation, Clock, Home as HomeIcon, Store, Mail, X } from 'lucide-react'
+import SafeAreaTabBar from '@/components/navigation/SafeAreaTabBar'
+import SafeAreaModal from '@/components/modal/SafeAreaModal'
+import { SafeAreaContainer } from '@/components/layout/SafeAreaLayout'
 import KakaoMap from '@/components/common/KakaoMap'
 import CoursePolyline from '@/components/common/CoursePolyline'
 import CourseMarker from '@/components/common/CourseMarker'
@@ -301,20 +304,35 @@ export default function Home() {
 
     if (showProfileDropdown) {
       document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
+      return () => {
+        document.removeEventListener('click', handleClickOutside)
+      }
     }
   }, [showProfileDropdown])
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* 인증 가능 알림 배너 */}
-      {userProfile?.id && (
-        <AuthenticationBanner userId={userProfile.id} />
-      )}
-      
-      {/* 상단 네비게이션 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
-        <div className="flex items-center justify-between px-4 py-3 animate-fade-in-up">
+<SafeAreaContainer 
+  className="min-h-screen bg-black text-white relative overflow-hidden"
+  padding={false}
+>
+  <div
+    style={{
+      background: 'linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%)'
+    }}
+    className="min-h-screen"
+  >
+    {/* 인증 가능 알림 배너 */}
+    {userProfile?.id && (
+      <AuthenticationBanner userId={userProfile.id} />
+    )}
+    
+    {/* 상단 네비게이션 */}
+    <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
+      <div className="flex items-center justify-between px-4 py-3 animate-fade-in-up">
+        {/* 좌측: 로고만 */}
+        <div>
+          <h1 className="text-lg font-bold text-[#00FF88]">RunSpot</h1>
+          <p className="text-xs text-gray-400">Seoul</p>
           {/* 좌측: 로고만 */}
           <div>
             <h1 className="text-lg font-bold text-[#00FF88]">RunSpot</h1>
@@ -510,97 +528,33 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 하단 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-gray-800/50 safe-bottom">
-        <div className="flex items-center justify-around py-2">
-          <button className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group">
-            <HomeIcon className="w-6 h-6 text-[#00FF88] group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-[#00FF88] font-medium">홈</span>
-          </button>
-          <button 
-            onClick={() => router.push('/running')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
-          >
-            <div className="relative">
-              <Play className="w-6 h-6 text-gray-400 group-hover:text-[#00FF88] group-hover:scale-110 transition-all" />
-            </div>
-            <span className="text-xs text-gray-400 group-hover:text-[#00FF88] transition-colors">런닝</span>
-          </button>
-          <button 
-            onClick={() => router.push('/spots')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
-          >
-            <Store className="w-6 h-6 text-gray-400 group-hover:text-white group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-white transition-colors">스팟</span>
-          </button>
-          <button 
-            onClick={() => router.push('/saved')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
-          >
-            <Bookmark className="w-6 h-6 text-gray-400 group-hover:text-white group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-white transition-colors">저장</span>
-          </button>
-          <button 
-            onClick={() => router.push('/profile')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
-          >
-            <User className="w-6 h-6 text-gray-400 group-hover:text-white group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-white transition-colors">프로필</span>
-          </button>
-        </div>
-      </div>
+      {/* SafeArea 적용된 하단 네비게이션 */}
+      <SafeAreaTabBar />
 
       {/* 하단 여백 (네비게이션 바 높이만큼) */}
       <div className="h-20"></div>
 
       {/* 회원가입 완료 안내 모달 */}
-      {showSignupMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-gray-900 rounded-3xl w-full max-w-sm border border-gray-800 shadow-2xl animate-fade-in-up relative">
-            {/* 닫기 버튼 */}
-            <button
-              onClick={() => {
-                setShowSignupMessage(false)
-                router.push('/login')
-              }}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
-            
-            <div className="p-6 text-center">
-
-              {/* 아이콘 */}
-              <div className="mb-4">
-                <Mail className="w-16 h-16 text-[#00FF88] mx-auto" />
-              </div>
-
-              {/* 제목 */}
-              <h3 className="text-xl font-bold text-white mb-2">
-                회원가입이 완료되었습니다!
-              </h3>
-
-              {/* 메시지 */}
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                <span className="text-[#00FF88] font-medium">{signupEmail}</span>로<br />
-                인증 이메일이 전송됩니다.<br />
-                인증 후 로그인이 가능합니다.
-              </p>
-
-              {/* 확인 버튼 */}
-              <button
-                onClick={() => {
-                  setShowSignupMessage(false)
-                  router.push('/login')
-                }}
-                className="w-full bg-[#00FF88] text-black font-semibold py-3 rounded-2xl hover:bg-[#00E077] transition-colors"
-              >
-                확인
-              </button>
-            </div>
-          </div>
+      <SafeAreaModal
+        isOpen={showSignupMessage}
+        onClose={() => {
+          setShowSignupMessage(false)
+          router.push('/login')
+        }}
+        type="success"
+        title="회원가입 완료!"
+        confirmText="확인"
+      >
+        <div className="text-center">
+          <Mail className="w-16 h-16 text-[#00FF88] mx-auto mb-4" />
+          <p className="text-gray-600 leading-relaxed">
+            <span className="text-[#00FF88] font-medium">{signupEmail}</span>로<br />
+            인증 이메일이 전송됩니다.<br />
+            인증 후 로그인이 가능합니다.
+          </p>
         </div>
-      )}
-    </div>
+      </SafeAreaModal>
+      </div>
+    </SafeAreaContainer>
   )
 }

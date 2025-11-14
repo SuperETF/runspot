@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { ArrowLeft, Play, Pause, Square, MapPin, Clock, Zap, Heart, Navigation, CheckCircle, AlertCircle } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import RunningMap from '@/components/common/RunningMap'
+import NavigationGuide from '@/components/common/NavigationGuide'
 
 function RunningStartContent() {
   const router = useRouter()
@@ -26,6 +27,12 @@ function RunningStartContent() {
   const [passedCheckpoints, setPassedCheckpoints] = useState<number[]>([]) // 통과한 체크포인트들
   const [isCompleted, setIsCompleted] = useState(false) // 완주 여부
   const [completionTime, setCompletionTime] = useState<number | null>(null) // 완주 시간
+  const [isSaving, setIsSaving] = useState(false) // 저장 중 상태
+  const [saveSuccess, setSaveSuccess] = useState(false) // 저장 성공 여부
+  const [runningResult, setRunningResult] = useState<any>(null) // 런닝 결과 데이터
+  const [showCompletionModal, setShowCompletionModal] = useState(false) // 완주 모달
+  const [showResultModal, setShowResultModal] = useState(false) // 결과 모달
+  const [showSaveModal, setShowSaveModal] = useState(false) // 저장 완료 모달
 
   // 세션 스토리지에서 코스 데이터 가져오기
   useEffect(() => {
@@ -116,6 +123,18 @@ function RunningStartContent() {
       setPace(paceInMinutes)
     }
   }, [distance, time])
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      // 정리 작업
+      setIsRunning(false)
+      setIsPaused(false)
+      setShowCompletionModal(false)
+      setShowResultModal(false)
+      setShowSaveModal(false)
+    }
+  }, [])
 
   // GPS 위치 업데이트 콜백
   const handleLocationUpdate = (location: any) => {
@@ -215,28 +234,48 @@ function RunningStartContent() {
     setIsRunning(false)
     setIsPaused(false)
     
-    // 데이터베이스에 완주 기록 저장
+    // 결과 데이터 저장
+    const resultData = {
+      courseName: course?.name || '알 수 없는 코스',
+      distance: distance,
+      duration: time,
+      avgSpeed: distance > 0 ? (distance / (time / 3600)) : 0,
+      calories: Math.round(calories),
+      completedAt: new Date()
+    }
+    setRunningResult(resultData)
+    
+    // 완주 축하 모달 표시
+    setTimeout(() => {
+      setShowCompletionModal(true)
+    }, 500)
+  }
+
+  // 기록 저장 함수
+  const saveRunningRecord = async () => {
+    if (!runningResult) return
+    
+    setIsSaving(true)
     try {
       const { supabase } = await import('@/lib/supabase')
       const { getCurrentUser } = await import('@/lib/auth')
       
       const user = await getCurrentUser()
       if (user) {
-        const completedAt = new Date()
+        const completedAt = runningResult.completedAt
         const expiresAt = new Date(completedAt.getTime() + 2 * 60 * 60 * 1000) // 2시간 후
         
         const runningLogData = {
           user_id: user.id,
           course_id: courseId,
-          course_name: course?.name || '알 수 없는 코스',
-          distance: distance,
-          duration: time, // 초 단위
-          pace: time > 0 ? (time / 60) / distance : 0, // 분/km
-          calories: Math.round(calories),
+          distance: runningResult.distance,
+          duration: runningResult.duration,
+          avg_speed: runningResult.avgSpeed,
+          calories: runningResult.calories,
+          gps_path: [], // GPS 경로 데이터 (필요시 추가)
           completed_at: completedAt.toISOString(),
           authentication_count: 0, // 초기값 0
-          expires_at: expiresAt.toISOString(), // 2시간 후 만료
-          gps_data: null // 필요시 GPS 데이터 추가
+          expires_at: expiresAt.toISOString() // 2시간 후 만료
         }
         
         const { error } = await (supabase as any)
@@ -245,18 +284,48 @@ function RunningStartContent() {
         
         if (error) {
           console.error('완주 기록 저장 오류:', error)
+          alert('기록 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
         } else {
           console.log('완주 기록 저장 완료!')
+          setSaveSuccess(true)
+          setShowSaveModal(true)
         }
       }
     } catch (error) {
       console.error('완주 처리 중 오류:', error)
+      alert('기록 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // 결과 확인 함수
+  const viewResults = () => {
+    if (!runningResult) return
+    setShowResultModal(true)
+  }
+
+  // 페이지 정리 함수
+  const cleanupAndExit = () => {
+    // 런닝 중이면 확인 후 종료
+    if (isRunning && !isCompleted) {
+      if (!confirm('런닝 중입니다. 정말 나가시겠습니까?')) {
+        return
+      }
     }
     
-    // 완주 축하 메시지
-    setTimeout(() => {
-      alert(`🎉 코스 완주 성공!\n\n⏱️ 완주 시간: ${formatTime(time)}\n📍 거리: ${distance.toFixed(2)}km\n🔥 칼로리: ${Math.round(calories)}kcal\n\n🎫 2시간 동안 제휴 스팟에서 인증 혜택을 받을 수 있습니다!`)
-    }, 500)
+    // 모든 상태 정리
+    setIsRunning(false)
+    setIsPaused(false)
+    setShowCompletionModal(false)
+    setShowResultModal(false)
+    setShowSaveModal(false)
+    
+    // 세션 스토리지 정리
+    sessionStorage.removeItem('selected_course')
+    
+    // 뒤로가기
+    router.back()
   }
 
   // 시작점으로 네비게이션
@@ -293,7 +362,7 @@ function RunningStartContent() {
       <div className="relative z-10 sticky top-0 bg-black/80 backdrop-blur-xl border-b border-gray-800">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
-            onClick={() => router.back()}
+            onClick={cleanupAndExit}
             className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -315,12 +384,29 @@ function RunningStartContent() {
             onDistanceUpdate={handleDistanceUpdate}
             courseRoute={course?.gps_route || []}
             userLocation={userLocation}
-            showStartPoint={!isRunning}
+            showStartPoint={true}
             currentCheckpoint={currentCheckpoint}
             passedCheckpoints={passedCheckpoints}
             isCompleted={isCompleted}
           />
         </div>
+
+        {/* 네비게이션 안내 */}
+        <NavigationGuide
+          userLocation={userLocation}
+          courseRoute={course?.gps_route || []}
+          currentCheckpoint={currentCheckpoint}
+          isRunning={isRunning && !isPaused}
+          onCheckpointReached={(checkpoint) => {
+            setCurrentCheckpoint(checkpoint)
+            setPassedCheckpoints(prev => [...prev, checkpoint])
+            
+            // 마지막 포인트 도달 시 완주 처리
+            if (checkpoint === (course?.gps_route?.length || 1) - 1) {
+              handleCompletion()
+            }
+          }}
+        />
 
         {/* 시작점 도착 확인 */}
         {showStartPointGuide && !isRunning && (
@@ -531,32 +617,169 @@ function RunningStartContent() {
 
         {/* 완주 후 결과 버튼 */}
         {isCompleted && (
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <button 
-              onClick={() => router.push('/running')}
-              className="bg-[#00FF88] hover:bg-[#00E077] text-black font-bold px-6 py-4 rounded-2xl flex items-center gap-2 transition-all duration-300"
-            >
-              <CheckCircle className="w-5 h-5" />
-              결과 확인
-            </button>
+          <div className="space-y-4 mt-6">
+            {/* 저장 상태 표시 */}
+            {saveSuccess && (
+              <div className="bg-green-500/20 border border-green-500 rounded-2xl p-4 text-center">
+                <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                <p className="text-green-400 font-bold">✅ 기록 저장 완료!</p>
+                <p className="text-green-300 text-sm">2시간 동안 제휴 스팟 인증 혜택을 받을 수 있습니다</p>
+              </div>
+            )}
             
-            <button 
-              onClick={() => {
-                // TODO: 결과를 데이터베이스에 저장
-                console.log('런닝 결과 저장:', {
-                  courseId: course.id,
-                  completionTime: completionTime || time,
-                  distance: distance,
-                  calories: calories,
-                  checkpointsPassed: passedCheckpoints.length
-                })
-                router.push('/running')
-              }}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-2 transition-all duration-300"
-            >
-              <Heart className="w-5 h-5" />
-              기록 저장
-            </button>
+            <div className="flex items-center justify-center gap-4">
+              <button 
+                onClick={viewResults}
+                className="bg-[#00FF88] hover:bg-[#00E077] text-black font-bold px-6 py-4 rounded-2xl flex items-center gap-2 transition-all duration-300"
+              >
+                <CheckCircle className="w-5 h-5" />
+                결과 확인
+              </button>
+              
+              <button 
+                onClick={saveRunningRecord}
+                disabled={isSaving || saveSuccess}
+                className={`font-bold px-6 py-4 rounded-2xl flex items-center gap-2 transition-all duration-300 ${
+                  saveSuccess 
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                    : isSaving
+                      ? 'bg-blue-400 text-white cursor-wait'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                <Heart className="w-5 h-5" />
+                {isSaving ? '저장 중...' : saveSuccess ? '저장 완료' : '기록 저장'}
+              </button>
+            </div>
+            
+          </div>
+        )}
+
+        {/* 완주 축하 모달 */}
+        {showCompletionModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-3xl p-8 max-w-md w-full border border-gray-700">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-[#00FF88] rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                  <CheckCircle className="w-10 h-10 text-black" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-[#00FF88] mb-4">🎉 완주 성공!</h2>
+                
+                <div className="space-y-3 text-gray-300 mb-6">
+                  <div className="flex justify-between">
+                    <span>⏱️ 완주 시간:</span>
+                    <span className="text-white font-medium">{formatTime(time)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>📍 거리:</span>
+                    <span className="text-white font-medium">{distance.toFixed(2)}km</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>🔥 칼로리:</span>
+                    <span className="text-white font-medium">{Math.round(calories)}kcal</span>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-gray-400 mb-6">
+                  기록을 저장하면 2시간 동안 제휴 스팟에서 인증 혜택을 받을 수 있습니다!
+                </p>
+                
+                <button
+                  onClick={() => setShowCompletionModal(false)}
+                  className="w-full bg-[#00FF88] hover:bg-[#00E077] text-black font-bold py-3 rounded-2xl transition-colors"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 결과 확인 모달 */}
+        {showResultModal && runningResult && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-3xl p-8 max-w-md w-full border border-gray-700">
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-white mb-6">🏃‍♂️ 런닝 결과</h2>
+                
+                <div className="space-y-4 text-left mb-6">
+                  <div className="flex justify-between py-2 border-b border-gray-700">
+                    <span className="text-gray-400">📍 코스</span>
+                    <span className="text-white font-medium">{runningResult.courseName}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-700">
+                    <span className="text-gray-400">⏱️ 완주 시간</span>
+                    <span className="text-white font-medium">{formatTime(runningResult.duration)}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-700">
+                    <span className="text-gray-400">📏 거리</span>
+                    <span className="text-white font-medium">{runningResult.distance.toFixed(2)}km</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-700">
+                    <span className="text-gray-400">⚡ 평균 속도</span>
+                    <span className="text-white font-medium">{runningResult.avgSpeed.toFixed(1)}km/h</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-700">
+                    <span className="text-gray-400">🔥 소모 칼로리</span>
+                    <span className="text-white font-medium">{runningResult.calories}kcal</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-gray-700">
+                    <span className="text-gray-400">📅 완주 시간</span>
+                    <span className="text-white font-medium">{runningResult.completedAt.toLocaleString()}</span>
+                  </div>
+                </div>
+                
+                <div className={`p-3 rounded-xl mb-6 ${
+                  saveSuccess ? 'bg-green-500/20 border border-green-500' : 'bg-yellow-500/20 border border-yellow-500'
+                }`}>
+                  <p className={`text-sm font-medium ${
+                    saveSuccess ? 'text-green-400' : 'text-yellow-400'
+                  }`}>
+                    {saveSuccess ? '✅ 기록 저장 완료!' : '⚠️ 아직 기록이 저장되지 않았습니다.'}
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowResultModal(false)}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 rounded-2xl transition-colors"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 저장 완료 모달 */}
+        {showSaveModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-3xl p-8 max-w-md w-full border border-gray-700">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                  <CheckCircle className="w-10 h-10 text-white" />
+                </div>
+                
+                <h2 className="text-2xl font-bold text-green-400 mb-4">🎉 저장 완료!</h2>
+                
+                <p className="text-gray-300 mb-4">
+                  런닝 기록이 성공적으로 저장되었습니다!
+                </p>
+                
+                <div className="bg-[#00FF88]/10 border border-[#00FF88]/30 rounded-2xl p-4 mb-6">
+                  <p className="text-[#00FF88] text-sm font-medium">
+                    🎫 2시간 동안 제휴 스팟에서<br/>인증 혜택을 받을 수 있습니다!
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-2xl transition-colors"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

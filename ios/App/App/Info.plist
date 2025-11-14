@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 앱 기본 정보 -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ko</string>
+	<key>CFBundleDisplayName</key>
+	<string>RunSpot Seoul</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.runspot.seoul</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.runspot.seoul</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>runspot</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- 지원 기기 및 방향 -->
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Privacy Usage Descriptions (필수) -->
+	<!-- 위치 서비스 권한 -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>RunSpot에서 현재 위치를 확인하여 주변 런닝 코스를 추천하고 GPS 추적 기능을 제공합니다.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>RunSpot에서 런닝 중 GPS 추적을 위해 위치 정보가 필요합니다. 백그라운드에서도 정확한 런닝 기록을 위해 사용됩니다.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>RunSpot에서 백그라운드 런닝 추적을 위해 항상 위치 정보 접근이 필요합니다.</string>
+
+	<!-- 모션 및 피트니스 권한 -->
+	<key>NSMotionUsageDescription</key>
+	<string>RunSpot에서 걸음 수 측정 및 운동 활동 감지를 위해 모션 센서에 접근합니다.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>RunSpot에서 건강 앱의 운동 데이터를 읽어와 더 정확한 피트니스 정보를 제공합니다.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>RunSpot에서 런닝 기록을 건강 앱에 저장하여 통합된 건강 관리를 지원합니다.</string>
+
+	<!-- 카메라 및 사진 권한 -->
+	<key>NSCameraUsageDescription</key>
+	<string>RunSpot에서 런닝 인증 사진 촬영 및 프로필 사진 등록을 위해 카메라에 접근합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RunSpot에서 사진 라이브러리에서 이미지를 선택하여 프로필 사진이나 런닝 인증 사진으로 사용합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>RunSpot에서 런닝 기록 스크린샷이나 인증 사진을 사진 라이브러리에 저장합니다.</string>
+
+	<!-- 알림 권한 -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>RunSpot에서 런닝 리마인더, 목표 달성 알림, 친구 활동 알림을 보내기 위해 알림 권한이 필요합니다.</string>
+
+	<!-- 연락처 권한 (친구 찾기 기능) -->
+	<key>NSContactsUsageDescription</key>
+	<string>RunSpot에서 연락처에 있는 친구들을 찾아 함께 런닝할 수 있도록 도와드립니다.</string>
+
+	<!-- 마이크 권한 (음성 메모 기능) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RunSpot에서 런닝 중 음성 메모나 음성 명령을 위해 마이크에 접근합니다.</string>
+
+	<!-- 캘린더 권한 (런닝 일정 관리) -->
+	<key>NSCalendarsUsageDescription</key>
+	<string>RunSpot에서 런닝 일정을 캘린더에 추가하고 관리할 수 있도록 도와드립니다.</string>
+
+	<!-- 블루투스 권한 (웨어러블 기기 연동) -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>RunSpot에서 스마트워치나 피트니스 트래커와 연동하여 더 정확한 운동 데이터를 제공합니다.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>RunSpot에서 블루투스 기기와 연결하여 운동 데이터를 동기화합니다.</string>
+
+	<!-- App Transport Security (ATS) 설정 -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- 모든 HTTP 연결 차단 -->
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		
+		<!-- 로컬 네트워크 HTTP 연결 차단 (iOS 10+) -->
+		<key>NSAllowsLocalNetworking</key>
+		<false/>
+		
+		<!-- 임의의 웹뷰 로드 차단 -->
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<false/>
+		
+		<!-- 미디어 로드 차단 -->
+		<key>NSAllowsArbitraryLoadsForMedia</key>
+		<false/>
+		
+		<!-- 도메인별 예외 설정 (HTTPS만 허용) -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<!-- Supabase 도메인 -->
+			<key>supabase.co</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<key>supabase.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<!-- Kakao API 도메인 -->
+			<key>dapi.kakao.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+			</dict>
+			
+			<key>kapi.kakao.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+			</dict>
+			
+			<key>apis.map.kakao.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+			</dict>
+			
+			<!-- Google APIs -->
+			<key>googleapis.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<key>maps.googleapis.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<key>fcm.googleapis.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<!-- Firebase -->
+			<key>firebase.googleapis.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<key>firebaseapp.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<key>firestore.googleapis.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<!-- CDN 및 정적 리소스 -->
+			<key>cloudflare.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+			</dict>
+			
+			<key>jsdelivr.net</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+			</dict>
+			
+			<key>unpkg.com</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+			</dict>
+			
+			<!-- 앱 도메인 -->
+			<key>runspot.seoul.kr</key>
+			<dict>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.3</string>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSRequiresCertificateTransparency</key>
+				<true/>
+				<!-- 인증서 핀 설정 -->
+				<key>NSPinnedDomains</key>
+				<dict>
+					<key>runspot.seoul.kr</key>
+					<dict>
+						<key>NSIncludesSubdomains</key>
+						<true/>
+						<key>NSPinnedCAIdentities</key>
+						<array>
+							<!-- SHA-256 해시 값 (실제 인증서로 교체 필요) -->
+							<data>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</data>
+							<data>BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</data>
+						</array>
+					</dict>
+				</dict>
+			</dict>
+		</dict>
+	</dict>
+
+	<!-- 백그라운드 모드 -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>background-processing</string>
+		<string>background-fetch</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- 필수 기기 기능 -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+		<string>location-services</string>
+		<string>gps</string>
+	</array>
+
+	<!-- 상태바 스타일 -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+
+	<!-- 런치 스크린 -->
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+
+	<!-- 앱 아이콘 -->
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>AppIcon20x20</string>
+				<string>AppIcon29x29</string>
+				<string>AppIcon40x40</string>
+				<string>AppIcon60x60</string>
+			</array>
+			<key>UIPrerenderedIcon</key>
+			<false/>
+		</dict>
+	</dict>
+
+	<!-- 씬 델리게이트 (iOS 13+) -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+
+	<!-- 다크 모드 지원 -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Automatic</string>
+
+	<!-- 키보드 지원 (iPad) -->
+	<key>UISupportsDocumentBrowser</key>
+	<false/>
+
+	<!-- 파일 공유 -->
+	<key>UIFileSharingEnabled</key>
+	<false/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<false/>
+
+	<!-- 앱 카테고리 -->
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.healthcare-fitness</string>
+
+	<!-- 최소 iOS 버전 -->
+	<key>MinimumOSVersion</key>
+	<string>12.0</string>
+
+	<!-- 런닝 관련 특수 권한 -->
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>RunningTrack</key>
+		<string>런닝 추적을 위해 임시로 정확한 위치 정보가 필요합니다.</string>
+		<key>CourseRecommendation</key>
+		<string>주변 런닝 코스 추천을 위해 현재 위치 정보가 필요합니다.</string>
+	</dict>
+
+	<!-- 센서 권한 -->
+	<key>NSFallDetectionUsageDescription</key>
+	<string>RunSpot에서 런닝 중 안전을 위해 낙상 감지 기능을 제공합니다.</string>
+
+	<!-- 음성 인식 권한 -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>RunSpot에서 음성 명령으로 런닝 기록을 제어할 수 있습니다.</string>
+
+	<!-- 미디어 라이브러리 권한 -->
+	<key>NSAppleMusicUsageDescription</key>
+	<string>RunSpot에서 런닝 중 음악 재생을 위해 음악 라이브러리에 접근합니다.</string>
+
+	<!-- 홈킷 권한 (스마트 홈 연동) -->
+	<key>NSHomeKitUsageDescription</key>
+	<string>RunSpot에서 스마트 홈 기기와 연동하여 런닝 환경을 최적화합니다.</string>
+
+	<!-- 시리 권한 -->
+	<key>NSSiriUsageDescription</key>
+	<string>RunSpot에서 시리를 통해 런닝 기록을 시작하고 조회할 수 있습니다.</string>
+
+	<!-- 페이스 ID / 터치 ID 권한 -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>RunSpot에서 안전한 로그인을 위해 Face ID를 사용합니다.</string>
+
+	<!-- 광고 추적 권한 (iOS 14.5+) -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>RunSpot에서 맞춤형 광고 및 서비스 개선을 위해 사용됩니다. 거부하셔도 앱 사용에 문제없습니다.</string>
+
+	<!-- 앱 추적 투명성 -->
+	<key>SKAdNetworkItems</key>
+	<array>
+		<!-- 필요시 광고 네트워크 ID 추가 -->
+	</array>
+</dict>
+</plist>

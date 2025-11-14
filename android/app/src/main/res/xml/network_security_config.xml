@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 기본 보안 설정: HTTPS만 허용 -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- 시스템 인증서만 신뢰 -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+
+    <!-- 도메인별 보안 설정 -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- Supabase 도메인 -->
+        <domain includeSubdomains="true">supabase.co</domain>
+        <domain includeSubdomains="true">supabase.com</domain>
+        
+        <!-- 카카오 API 도메인 -->
+        <domain includeSubdomains="true">dapi.kakao.com</domain>
+        <domain includeSubdomains="true">kapi.kakao.com</domain>
+        <domain includeSubdomains="true">apis.map.kakao.com</domain>
+        
+        <!-- Google APIs -->
+        <domain includeSubdomains="true">googleapis.com</domain>
+        <domain includeSubdomains="true">maps.googleapis.com</domain>
+        <domain includeSubdomains="true">fcm.googleapis.com</domain>
+        
+        <!-- Firebase -->
+        <domain includeSubdomains="true">firebase.googleapis.com</domain>
+        <domain includeSubdomains="true">firebaseapp.com</domain>
+        <domain includeSubdomains="true">firestore.googleapis.com</domain>
+        
+        <!-- CDN 및 정적 리소스 -->
+        <domain includeSubdomains="true">cloudflare.com</domain>
+        <domain includeSubdomains="true">jsdelivr.net</domain>
+        <domain includeSubdomains="true">unpkg.com</domain>
+        
+        <!-- 앱 도메인 -->
+        <domain includeSubdomains="true">runspot.seoul.kr</domain>
+        <domain includeSubdomains="true">api.runspot.seoul.kr</domain>
+        
+        <pin-set expiration="2025-12-31">
+            <!-- Supabase SSL 인증서 핀 -->
+            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        </pin-set>
+        
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </domain-config>
+
+    <!-- 개발 환경 설정 (릴리즈 빌드에서는 제거) -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system"/>
+            <!-- 개발용 인증서 (필요시) -->
+            <!-- <certificates src="user"/> -->
+        </trust-anchors>
+    </debug-overrides>
+
+    <!-- 특정 도메인에 대한 추가 보안 설정 -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- 결제 관련 도메인 (향후 추가 시) -->
+        <domain includeSubdomains="true">payment.runspot.seoul.kr</domain>
+        
+        <!-- 더 강한 보안 설정 -->
+        <pin-set expiration="2025-12-31">
+            <pin digest="SHA-256">CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=</pin>
+            <pin digest="SHA-256">DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD=</pin>
+        </pin-set>
+        
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </domain-config>
+
+    <!-- 로컬 개발 서버 (개발 시에만 사용) -->
+    <!-- 프로덕션에서는 이 섹션을 완전히 제거해야 함 -->
+    <!--
+    <domain-config cleartextTrafficPermitted="true">
+        <domain>localhost</domain>
+        <domain>127.0.0.1</domain>
+        <domain>10.0.2.2</domain>
+        <domain>192.168.1.0/24</domain>
+    </domain-config>
+    -->
+
+</network-security-config>
