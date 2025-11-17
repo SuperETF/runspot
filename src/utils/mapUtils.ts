@@ -1,27 +1,5 @@
 import { GPSCoordinate } from '@/types/database'
 
-// Kakao Maps API 타입 정의
-declare global {
-  interface Window {
-    kakao: {
-      maps: {
-        Map: new (container: HTMLElement, options: any) => any
-        LatLng: new (lat: number, lng: number) => any
-        Marker: new (options: any) => any
-        Polyline: new (options: any) => any
-        MarkerImage: new (src: string, size: any, options?: any) => any
-        Size: new (width: number, height: number) => any
-        Point: new (x: number, y: number) => any
-        InfoWindow: new (options: any) => any
-        event: {
-          addListener: (target: any, type: string, handler: Function) => void
-        }
-        load: (callback: () => void) => void
-      }
-    }
-  }
-}
-
 // 거리 계산 함수 (Haversine formula)
 export const calculateDistance = (
   point1: GPSCoordinate,
@@ -55,6 +33,65 @@ export const calculateRouteDistance = (route: GPSCoordinate[]): number => {
   }
   
   return totalDistance
+}
+
+// 코스 전체 거리 계산 (gps_route 기준)
+// 반환: km 단위 거리
+export const calculateCourseTotalDistance = (route: GPSCoordinate[]): number => {
+  return calculateRouteDistance(route)
+}
+
+// 현재 위치가 코스 상에서 어느 지점까지 진행됐는지 추정
+// 반환 단위: km
+export const calculateCourseProgressAlongRoute = (
+  route: GPSCoordinate[],
+  currentPosition: GPSCoordinate
+): {
+  totalDistance: number
+  distanceAlongRoute: number
+  remainingDistance: number
+  nearestIndex: number
+} => {
+  const totalDistance = calculateCourseTotalDistance(route)
+  if (route.length === 0) {
+    return {
+      totalDistance,
+      distanceAlongRoute: 0,
+      remainingDistance: totalDistance,
+      nearestIndex: -1
+    }
+  }
+
+  // 가장 가까운 포인트 찾기
+  let nearestIndex = 0
+  let minDistance = Number.POSITIVE_INFINITY
+
+  route.forEach((point, index) => {
+    const d = calculateDistance(point, currentPosition)
+    if (d < minDistance) {
+      minDistance = d
+      nearestIndex = index
+    }
+  })
+
+  // 시작점부터 nearestIndex까지의 거리 합산
+  let distanceAlongRoute = 0
+  if (nearestIndex > 0) {
+    for (let i = 0; i < nearestIndex; i++) {
+      distanceAlongRoute += calculateDistance(route[i], route[i + 1])
+    }
+  }
+
+  // 남은 거리 계산
+  let remainingDistance = totalDistance - distanceAlongRoute
+  if (remainingDistance < 0) remainingDistance = 0
+
+  return {
+    totalDistance,
+    distanceAlongRoute,
+    remainingDistance,
+    nearestIndex
+  }
 }
 
 // 두 점 사이의 중점 계산
@@ -93,7 +130,7 @@ export const getBounds = (points: GPSCoordinate[]) => {
 
 // Kakao Maps API 로드 확인
 export const isKakaoMapsLoaded = (): boolean => {
-  return typeof window !== 'undefined' && !!window.kakao && !!window.kakao.maps
+  return typeof window !== 'undefined' && !!(window as any).kakao && !!(window as any).kakao.maps
 }
 
 // Kakao Maps API 로드 대기
@@ -122,7 +159,7 @@ export const waitForKakaoMaps = (): Promise<void> => {
 // 좌표를 Kakao Maps LatLng 객체로 변환
 export const toKakaoLatLng = (coord: GPSCoordinate) => {
   if (!isKakaoMapsLoaded()) return null
-  return new window.kakao.maps.LatLng(coord.lat, coord.lng)
+  return new (window as any).kakao.maps.LatLng(coord.lat, coord.lng)
 }
 
 // Kakao Maps LatLng 객체를 좌표로 변환
