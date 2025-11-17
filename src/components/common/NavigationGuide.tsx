@@ -13,6 +13,13 @@ interface NavigationGuideProps {
   onStartNavigation?: () => void
   onStopNavigation?: () => void
   isNavigationMode?: boolean
+  inline?: boolean // true면 페이지에 통합, false면 floating
+  // 실제 런닝 통계 데이터
+  runningStats?: {
+    time: number // 경과 시간 (초)
+    distance: number // 진행 거리 (km)
+    pace: number // 페이스 (분/km)
+  }
 }
 
 interface NavigationInfo {
@@ -31,7 +38,9 @@ export default function NavigationGuide({
   onCheckpointReached,
   onStartNavigation,
   onStopNavigation,
-  isNavigationMode = false
+  isNavigationMode = false,
+  inline = false,
+  runningStats
 }: NavigationGuideProps) {
   const [navigationInfo, setNavigationInfo] = useState<NavigationInfo>({
     distanceToNext: 0,
@@ -212,14 +221,35 @@ const formatPace = (paceMinutes: number) => {
   return `${minutes}'${seconds.toString().padStart(2, '0')}"`
 }
 
-  const remainingKm = Math.max(0, remainingCourseDistance)
-  const alongKm = Math.max(0, distanceAlongCourse)
-  const totalKm = Math.max(0, totalCourseDistance)
-  const durationSec = currentStats.duration
-  const paceMinutes = currentStats.pace
+  // 실제 런닝 통계 데이터 사용
+  const durationSec = runningStats?.time || 0
+  const alongKm = runningStats?.distance || 0
+  const paceMinutes = runningStats?.pace || 0
+  
+  // 코스 총 거리 계산
+  const calculateTotalDistance = (points: Array<{lat: number, lng: number}>) => {
+    if (points.length < 2) return 0
+    let total = 0
+    for (let i = 0; i < points.length - 1; i++) {
+      total += calculateDistance(
+        points[i].lat, points[i].lng,
+        points[i + 1].lat, points[i + 1].lng
+      )
+    }
+    return total
+  }
+  
+  const totalKm = courseRoute.length > 1 ? calculateTotalDistance(courseRoute) : 0
+  
+  // 남은 거리 계산 (총 거리 - 진행 거리)
+  const remainingKm = Math.max(0, totalKm - alongKm)
+
+  const containerClass = inline 
+    ? "w-full" // 페이지에 통합
+    : "fixed bottom-24 left-4 right-4 z-30" // floating
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 z-30">
+    <div className={containerClass}>
       <div className={`rounded-2xl p-4 shadow-lg border-2 transition-all duration-300 ${
         !isOnTrack 
           ? 'bg-red-500 border-red-400' 

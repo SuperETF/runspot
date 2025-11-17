@@ -20,8 +20,23 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
           getCurrentLocation()
         } else if (result.state === 'denied') {
           setPermissionState('denied')
+        } else {
+          // prompt 상태인 경우 자동으로 권한 요청
+          setTimeout(() => {
+            getCurrentLocation()
+          }, 500)
         }
+      }).catch(() => {
+        // permissions API를 지원하지 않는 경우 바로 권한 요청
+        setTimeout(() => {
+          getCurrentLocation()
+        }, 500)
       })
+    } else {
+      // permissions API를 지원하지 않는 경우 바로 권한 요청
+      setTimeout(() => {
+        getCurrentLocation()
+      }, 500)
     }
   }, [])
 
@@ -46,16 +61,16 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            setError('위치 정보 접근이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.')
+            setError('위치 정보 접근이 거부되었습니다. 브라우저 주소창 옆의 위치 아이콘을 클릭하여 위치 권한을 허용해주세요.')
             break
           case error.POSITION_UNAVAILABLE:
-            setError('위치 정보를 사용할 수 없습니다.')
+            setError('위치 정보를 사용할 수 없습니다. GPS가 켜져 있는지 확인해주세요.')
             break
           case error.TIMEOUT:
-            setError('위치 정보 요청 시간이 초과되었습니다.')
+            setError('위치 정보 요청 시간이 초과되었습니다. 다시 시도해주세요.')
             break
           default:
-            setError('알 수 없는 오류가 발생했습니다.')
+            setError('위치 정보를 가져올 수 없습니다. 다시 시도해주세요.')
             break
         }
         
@@ -63,8 +78,8 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
+        timeout: 15000,
+        maximumAge: 0
       }
     )
   }
@@ -98,14 +113,25 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
         <MapPin className="w-12 h-12 text-[#00FF88] mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-white mb-2">위치 정보 필요</h3>
         <p className="text-gray-400 text-sm mb-4">
-          런닝 경로 추적을 위해 위치 정보가 필요합니다
+          런닝 경로 추적을 위해 위치 정보가 필요합니다.<br />
+          <span className="text-[#00FF88] font-medium">브라우저에서 위치 허용을 선택해주세요.</span>
         </p>
         
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4">
-            <div className="flex items-center gap-2 text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              <span>{error}</span>
+            <div className="flex items-start gap-2 text-red-400 text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="mb-2">{error}</p>
+                {error.includes('거부') && (
+                  <div className="text-xs text-gray-400 space-y-1">
+                    <p>📱 <strong>모바일 브라우저:</strong></p>
+                    <p>1. 주소창 옆 자물쇠/위치 아이콘 클릭</p>
+                    <p>2. 위치 권한을 '허용'으로 변경</p>
+                    <p>3. 페이지 새로고침</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -120,6 +146,7 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
         <div className="mt-4 text-xs text-gray-500">
           <p>• 위치 정보는 런닝 경로 추적에만 사용됩니다</p>
           <p>• 개인정보는 저장되지 않습니다</p>
+          <p className="mt-2 text-[#00FF88]">💡 모바일에서는 브라우저 설정에서 위치 권한을 허용해주세요</p>
         </div>
       </div>
     </div>

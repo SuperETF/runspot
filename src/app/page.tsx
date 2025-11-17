@@ -9,6 +9,7 @@ import CourseMarker from '@/components/common/CourseMarker'
 import CourseMarkerIcon from '@/components/common/CourseMarkerIcon'
 import SupabaseStatus from '@/components/common/SupabaseStatus'
 import AuthenticationBanner from '@/components/common/AuthenticationBanner'
+import LocationPermission from '@/components/common/LocationPermission'
 import BookmarkButton from '@/components/BookmarkButton'
 import { GPSCoordinate, Course } from '@/types/database'
 import { getNearbyCoursesFromLocation, getCourses } from '@/lib/courses'
@@ -30,6 +31,8 @@ export default function Home() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const [showSignupMessage, setShowSignupMessage] = useState(false)
   const [signupEmail, setSignupEmail] = useState('')
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+  const [showLocationPermission, setShowLocationPermission] = useState(false)
 
   // 샘플 코스 데이터 (한강공원 여의도) - 백업용
   const sampleRoute: GPSCoordinate[] = [
@@ -141,6 +144,31 @@ export default function Home() {
     // 전체 코스 먼저 로드
     await loadAllCourses()
 
+    // 위치 권한 확인
+    if ('permissions' in navigator) {
+      try {
+        const result = await navigator.permissions.query({ name: 'geolocation' })
+        if (result.state === 'granted') {
+          // 이미 권한이 있는 경우 바로 위치 가져오기
+          getCurrentLocationDirect()
+        } else {
+          // 권한이 없거나 prompt 상태인 경우 LocationPermission 컴포넌트 표시
+          setShowLocationPermission(true)
+          setLocationLoading(false)
+        }
+      } catch (error) {
+        // permissions API를 지원하지 않는 경우 LocationPermission 컴포넌트 표시
+        setShowLocationPermission(true)
+        setLocationLoading(false)
+      }
+    } else {
+      // permissions API를 지원하지 않는 경우 LocationPermission 컴포넌트 표시
+      setShowLocationPermission(true)
+      setLocationLoading(false)
+    }
+  }
+
+  const getCurrentLocationDirect = () => {
     if (!navigator.geolocation) {
       setLocationError('이 브라우저는 위치 서비스를 지원하지 않습니다.')
       setLocationLoading(false)
@@ -167,15 +195,18 @@ export default function Home() {
         setLocationAccuracy(position.coords.accuracy)
         await loadNearbyCourses(location.lat, location.lng)
         setLocationLoading(false)
+        setLocationPermissionGranted(true)
+        setShowLocationPermission(false)
       },
       (error) => {
         setLocationLoading(false)
         setLocationError('위치 정보를 가져올 수 없습니다.')
+        setShowLocationPermission(true)
       },
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 30000
+        maximumAge: 0
       }
     )
   }
@@ -204,6 +235,12 @@ export default function Home() {
   }
 
   const moveToMyLocation = () => {
+    if (!locationPermissionGranted) {
+      // 위치 권한이 없는 경우 LocationPermission 컴포넌트 표시
+      setShowLocationPermission(true)
+      return
+    }
+
     setLocationLoading(true)
 
     if (!navigator.geolocation) {
@@ -240,7 +277,7 @@ export default function Home() {
         
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            alert('위치 정보 접근이 거부되었습니다.')
+            setShowLocationPermission(true)
             break
           case error.POSITION_UNAVAILABLE:
             alert('위치 정보를 사용할 수 없습니다.')
@@ -256,7 +293,7 @@ export default function Home() {
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 10000
+        maximumAge: 0
       }
     )
   }
@@ -320,6 +357,37 @@ export default function Home() {
       return () => document.removeEventListener('click', handleClickOutside)
     }
   }, [showProfileDropdown])
+
+  // LocationPermission 콜백 함수들
+  const handleLocationPermissionGranted = async (position: GeolocationPosition) => {
+    const location = {
+      lat: position.coords.latitude,
+      lng: position.coords.longitude
+    }
+    
+    console.log('📍 위치 권한 허용됨:', {
+      위도: position.coords.latitude,
+      경도: position.coords.longitude,
+      정확도: position.coords.accuracy + 'm'
+    })
+    
+    setUserLocation(location)
+    setMapCenter(location)
+    setLocationAccuracy(position.coords.accuracy)
+    setLocationPermissionGranted(true)
+    setShowLocationPermission(false)
+    
+    // 주변 코스 로드
+    await loadNearbyCourses(location.lat, location.lng)
+  }
+
+  const handleLocationPermissionDenied = () => {
+    console.log('📍 위치 권한 거부됨')
+    setLocationError('위치 정보 접근이 거부되었습니다.')
+    setShowLocationPermission(false)
+    // 기본 위치(서울)로 설정
+    setMapCenter({ lat: 37.5665, lng: 126.9780 })
+  }
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
@@ -414,20 +482,29 @@ export default function Home() {
           </div>
           
           <div className="relative">
-            <KakaoMap
-              center={currentCenter}
-              zoom={3}
-              height="300px"
-              userLocation={userLocation}
-              userProfile={userProfile}
-              locationAccuracy={locationAccuracy || undefined}
-              courses={nearbyCourses}
-              onCourseClick={(course) => {
-                console.log('코스 클릭:', course)
-                router.push(`/running/start?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`)
-              }}
-            >
-            </KakaoMap>
+            {showLocationPermission ? (
+              <div className="p-4">
+                <LocationPermission
+                  onPermissionGranted={handleLocationPermissionGranted}
+                  onPermissionDenied={handleLocationPermissionDenied}
+                />
+              </div>
+            ) : (
+              <KakaoMap
+                center={currentCenter}
+                zoom={3}
+                height="300px"
+                userLocation={userLocation}
+                userProfile={userProfile}
+                locationAccuracy={locationAccuracy || undefined}
+                courses={nearbyCourses}
+                onCourseClick={(course) => {
+                  console.log('코스 클릭:', course)
+                  router.push(`/running/start?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`)
+                }}
+              >
+              </KakaoMap>
+            )}
             
             {/* 지도 위 오버레이 정보 */}
             {userLocation && (
