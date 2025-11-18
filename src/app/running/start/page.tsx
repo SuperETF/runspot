@@ -8,6 +8,7 @@ import { useRunningSession } from '@/hooks/useRunningSession'
 import { useRunningStore } from '@/stores/runningStore'
 import { backgroundGPSTracker, type TrackingSession } from '@/services/backgroundGPSTracker'
 import { verifyGPSSession, type VerificationResult } from '@/services/gpsVerification'
+import { generateKakaoBicycleNavUrl, generateKakaoWebFallbackUrl, getRouteInfo } from '@/services/routeOptimization'
 import { getCourse } from '@/lib/courses'
 import RunningHeader from './components/RunningHeader'
 import StartPointGuide from './components/StartPointGuide'
@@ -70,6 +71,9 @@ function RunningStartContent() {
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null)
   const [showVerificationUI, setShowVerificationUI] = useState(false)
   const [showScreenshotModal, setShowScreenshotModal] = useState(false)
+  
+  // 카카오맵 네비게이션 상태
+  const [kakaoNavActive, setKakaoNavActive] = useState(false)
 
   // 런닝 스토어에서 통계 가져오기
   const duration = useRunningStore((state) => state.currentStats.duration)
@@ -144,18 +148,64 @@ function RunningStartContent() {
   }
 
   // 런닝 시작 핸들러
-  const handleStartRunning = () => {
-    if (course) {
-      startRunning(course)
-      
-      // 런닝 시작과 동시에 1인칭 네비게이션 모드 자동 활성화
-      setTimeout(() => {
-        if (navigationFunctions?.startNav) {
-          navigationFunctions.startNav()
-          console.log('🎯 런닝 시작: 1인칭 네비게이션 모드 자동 활성화')
-        }
-      }, 1000) // 1초 후 네비게이션 모드 활성화 (지도 초기화 대기)
+  const handleStartRunning = async () => {
+    if (!course) return
+
+    startRunning(course)
+    
+    // 백그라운드 GPS 추적 시작 (카카오맵 사용을 위해)
+    try {
+      const sessionId = await backgroundGPSTracker.startTracking(course.id)
+      setBackgroundTracking({
+        isActive: true,
+        sessionId,
+        session: null
+      })
+      console.log('🎯 런닝 시작: 백그라운드 GPS 추적 시작:', sessionId)
+    } catch (error) {
+      console.error('백그라운드 GPS 추적 시작 실패:', error)
     }
+
+    // 카카오맵 자전거 네비게이션 자동 실행
+    if (course.gps_route && course.gps_route.length > 0 && userLocation) {
+      // 경로 정보 출력
+      const routeInfo = getRouteInfo(course.gps_route)
+      console.log('🗺️ 경로 정보:', {
+        총거리: `${(routeInfo.totalDistance / 1000).toFixed(2)}km`,
+        예상시간: `${routeInfo.estimatedDuration}분`,
+        포인트수: routeInfo.waypointCount
+      })
+      
+      // 최적화된 자전거 네비게이션 URL 생성
+      const bicycleNavUrl = generateKakaoBicycleNavUrl(userLocation, course.gps_route, true)
+      const fallbackUrl = generateKakaoWebFallbackUrl(course.gps_route)
+      
+      console.log('🚴‍♂️ 카카오맵 자전거 네비게이션 실행:', bicycleNavUrl)
+      
+      // 모바일 앱에서는 카카오맵 앱 직접 호출
+      if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+        // React Native WebView 환경
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'OPEN_KAKAO_NAV',
+          url: bicycleNavUrl,
+          fallbackUrl: fallbackUrl
+        }))
+      } else {
+        // 웹 환경에서는 새 창으로 열기
+        window.open(bicycleNavUrl, '_blank')
+      }
+      
+      // 카카오맵 네비게이션 활성화 상태 설정
+      setKakaoNavActive(true)
+    }
+    
+    // RunSpot 내부 1인칭 네비게이션 모드도 활성화 (백업용)
+    setTimeout(() => {
+      if (navigationFunctions?.startNav) {
+        navigationFunctions.startNav()
+        console.log('🎯 RunSpot 1인칭 네비게이션 모드 활성화')
+      }
+    }, 1000)
   }
 
   // 뒤로가기 핸들러
@@ -401,6 +451,19 @@ function RunningStartContent() {
           )}
         </div>
 
+        {/* 카카오맵 네비게이션 활성 상태 */}
+        {kakaoNavActive && isRunning && (
+          <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <div>
+                <p className="text-sm font-medium text-green-800">🚴‍♂️ 카카오맵 자전거 네비게이션 실행 중</p>
+                <p className="text-xs text-green-600">카카오맵에서 경로를 따라 런닝하세요. 완주 후 돌아오면 자동 인증됩니다.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 백그라운드 GPS 추적 상태 */}
         {backgroundTracking.isActive && (
           <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -415,6 +478,7 @@ function RunningStartContent() {
                   const session = handleStopBackgroundTracking()
                   if (session) {
                     attemptAutoVerification(session)
+                    setKakaoNavActive(false) // 네비게이션 상태도 종료
                   }
                 }}
                 className="ml-auto text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg"
