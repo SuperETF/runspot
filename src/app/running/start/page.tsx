@@ -4,17 +4,16 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import RunningMap from '@/components/common/RunningMap'
 import NavigationGuide from '@/components/common/NavigationGuide'
+import { useRunningSession } from '@/hooks/useRunningSession'
 import { useRunningStore } from '@/stores/runningStore'
+import { backgroundGPSTracker, type TrackingSession } from '@/services/backgroundGPSTracker'
+import { verifyGPSSession, type VerificationResult } from '@/services/gpsVerification'
 import { getCourse } from '@/lib/courses'
-
-// 새로운 컴포넌트들 import
 import RunningHeader from './components/RunningHeader'
 import StartPointGuide from './components/StartPointGuide'
 import RunningStats from './components/RunningStats'
 import RunningControls from './components/RunningControls'
-
-// 커스텀 훅 import
-import { useRunningSession } from '@/hooks/useRunningSession'
+import ScreenshotVerification from './components/ScreenshotVerification'
 
 function RunningStartContent() {
   const router = useRouter()
@@ -56,6 +55,22 @@ function RunningStartContent() {
   // 1인칭 추적 모드 상태
   const [isFirstPersonMode, setIsFirstPersonMode] = useState(false)
 
+  // 백그라운드 GPS 추적 상태
+  const [backgroundTracking, setBackgroundTracking] = useState<{
+    isActive: boolean
+    sessionId: string | null
+    session: TrackingSession | null
+  }>({
+    isActive: false,
+    sessionId: null,
+    session: null
+  })
+
+  // 검증 결과 상태
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null)
+  const [showVerificationUI, setShowVerificationUI] = useState(false)
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false)
+
   // 런닝 스토어에서 통계 가져오기
   const duration = useRunningStore((state) => state.currentStats.duration)
   const distance = useRunningStore((state) => state.currentStats.distance)
@@ -85,6 +100,24 @@ function RunningStartContent() {
       loadCourse()
     }
   }, [courseId, setCourseData])
+
+  // 페이지 로드 시 기존 GPS 세션 복구
+  useEffect(() => {
+    const recoverGPSSession = () => {
+      const recoveredSession = backgroundGPSTracker.recoverSession()
+      
+      if (recoveredSession && recoveredSession.isActive) {
+        setBackgroundTracking({
+          isActive: true,
+          sessionId: recoveredSession.id,
+          session: recoveredSession
+        })
+        console.log('🔄 GPS 세션 복구:', recoveredSession.id)
+      }
+    }
+
+    recoverGPSSession()
+  }, [])
 
   // 네비게이션 준비 콜백
   const handleNavigationReady = (startNav: () => void, stopNav: () => void, isNavMode: boolean) => {
@@ -139,14 +172,105 @@ function RunningStartContent() {
     setVoiceEnabled(!voiceEnabled)
   }
 
+  // 스크린샷 인증 완료 처리
+  const handleScreenshotVerificationComplete = (result: any) => {
+    console.log('📸 스크린샷 인증 완료:', result)
+    
+    // 성공한 경우 런닝 완료 처리
+    if (result.verified) {
+      // TODO: 실제 런닝 완료 로직 구현
+      alert(`완주 인증 완료!\n거리: ${result.extractedData.distance}\n시간: ${result.extractedData.duration}`)
+      
+      // 모달 닫기
+      setShowScreenshotModal(false)
+      setShowVerificationUI(false)
+      
+      // 홈으로 이동 또는 결과 페이지로 이동
+      // router.push('/running/result')
+    }
+  }
+
+  // 백그라운드 GPS 추적 중단 및 데이터 수집
+  const handleStopBackgroundTracking = () => {
+    if (!backgroundTracking.isActive) return null
+
+    const completedSession = backgroundGPSTracker.stopTracking()
+    
+    setBackgroundTracking({
+      isActive: false,
+      sessionId: null,
+      session: completedSession
+    })
+
+    console.log('🛑 백그라운드 GPS 추적 중단:', completedSession)
+    return completedSession
+  }
+
+  // 앱으로 돌아왔을 때 자동 완주 검증 시도
+  const attemptAutoVerification = (session: TrackingSession) => {
+    if (!session || !course) return false
+
+    console.log('🔍 자동 완주 검증 시도:', {
+      sessionId: session.id,
+      pointCount: session.gpsPoints.length,
+      duration: session.endTime ? session.endTime - session.startTime : 0
+    })
+
+    // GPS 데이터 검증 실행
+    const verification = verifyGPSSession(session, course)
+    setVerificationResult(verification)
+    
+    console.log('📊 검증 결과:', {
+      confidence: verification.confidence,
+      recommendation: verification.recommendation,
+      issues: verification.issues,
+      metrics: verification.metrics
+    })
+
+    // 검증 결과에 따른 처리
+    switch (verification.recommendation) {
+      case 'AUTO_APPROVE':
+        console.log('✅ 자동 인증 성공')
+        setShowVerificationUI(true)
+        return true
+        
+      case 'MANUAL_REVIEW':
+        console.log('⚠️ 수동 검토 필요')
+        setShowVerificationUI(true)
+        return false
+        
+      case 'SCREENSHOT_REQUIRED':
+        console.log('❌ 스크린샷 인증 필요')
+        setShowVerificationUI(true)
+        return false
+        
+      default:
+        return false
+    }
+  }
+
   // 카카오맵으로 시작점까지 길찾기
-  const handleNavigateToStart = () => {
+  const handleNavigateToStart = async () => {
     if (!course?.gps_route || course.gps_route.length === 0) {
       alert('코스 정보가 없습니다.')
       return
     }
 
     const startPoint = course.gps_route[0]
+    
+    // 백그라운드 GPS 추적 시작
+    try {
+      const sessionId = await backgroundGPSTracker.startTracking(course.id)
+      setBackgroundTracking({
+        isActive: true,
+        sessionId,
+        session: null
+      })
+      console.log('🎯 백그라운드 GPS 추적 시작:', sessionId)
+    } catch (error) {
+      console.error('백그라운드 GPS 추적 시작 실패:', error)
+      // GPS 추적 실패해도 카카오맵은 열어줌
+    }
     
     // 모바일 앱용 카카오맵 네이티브 연동
     if (userLocation) {
@@ -277,6 +401,115 @@ function RunningStartContent() {
           )}
         </div>
 
+        {/* 백그라운드 GPS 추적 상태 */}
+        {backgroundTracking.isActive && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+              <div>
+                <p className="text-sm font-medium text-blue-800">백그라운드 GPS 추적 중</p>
+                <p className="text-xs text-blue-600">카카오맵에서 런닝 후 돌아오면 자동으로 기록됩니다</p>
+              </div>
+              <button
+                onClick={() => {
+                  const session = handleStopBackgroundTracking()
+                  if (session) {
+                    attemptAutoVerification(session)
+                  }
+                }}
+                className="ml-auto text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg"
+              >
+                완주 확인
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 검증 결과 UI */}
+        {showVerificationUI && verificationResult && (
+          <div className="mb-6">
+            {verificationResult.recommendation === 'AUTO_APPROVE' && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">✅</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-green-800 mb-2">완주 인증 완료!</h3>
+                  <p className="text-sm text-green-600 mb-4">
+                    GPS 데이터 분석 결과 완주가 확인되었습니다
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-gray-600">거리</p>
+                      <p className="font-bold text-green-700">{verificationResult.metrics.distance.toFixed(2)}km</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3">
+                      <p className="text-gray-600">신뢰도</p>
+                      <p className="font-bold text-green-700">{(verificationResult.confidence * 100).toFixed(0)}%</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {verificationResult.recommendation === 'MANUAL_REVIEW' && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">⚠️</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-yellow-800 mb-2">검토 중</h3>
+                  <p className="text-sm text-yellow-600 mb-4">
+                    GPS 데이터에 일부 문제가 있어 검토가 필요합니다
+                  </p>
+                  <div className="text-xs text-yellow-700 mb-4">
+                    <p className="font-medium mb-2">발견된 문제:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {verificationResult.issues.map((issue, index) => (
+                        <li key={index}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => setShowScreenshotModal(true)}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    스크린샷으로 인증하기
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {verificationResult.recommendation === 'SCREENSHOT_REQUIRED' && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">📸</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-red-800 mb-2">스크린샷 인증 필요</h3>
+                  <p className="text-sm text-red-600 mb-4">
+                    GPS 데이터만으로는 완주를 확인할 수 없습니다
+                  </p>
+                  <div className="text-xs text-red-700 mb-4">
+                    <p className="font-medium mb-2">문제점:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {verificationResult.issues.map((issue, index) => (
+                        <li key={index}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => setShowScreenshotModal(true)}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    카카오맵 완주 화면 업로드
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 시작점 가이드 */}
         {isPreRunning && (
           <StartPointGuide
@@ -322,6 +555,14 @@ function RunningStartContent() {
           onResume={resumeRunning}
           onStop={stopRunning}
         />
+
+        {/* 스크린샷 인증 모달 */}
+        {showScreenshotModal && (
+          <ScreenshotVerification
+            onClose={() => setShowScreenshotModal(false)}
+            onVerificationComplete={handleScreenshotVerificationComplete}
+          />
+        )}
       </div>
     </div>
   )
