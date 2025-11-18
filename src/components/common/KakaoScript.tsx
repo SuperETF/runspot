@@ -76,15 +76,6 @@ export default function KakaoScript({ apiKey, children }: KakaoScriptProps) {
     setIsLoading(false)
   }
 
-  // 이미 로드되었거나 로딩 중이면 스크립트 태그를 추가하지 않음
-  if (isLoaded) {
-    return <>{children}</>
-  }
-
-  if (isLoading) {
-    return <>{children}</>
-  }
-
   // API 키가 없으면 에러 표시
   if (!apiKey) {
     console.error('❌ Kakao Maps API 키가 설정되지 않았습니다.')
@@ -100,26 +91,22 @@ export default function KakaoScript({ apiKey, children }: KakaoScriptProps) {
         onLoad={handleLoad}
         onError={handleError}
       />
-      <Script
-        id="kakao-js-sdk"
-        src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          console.log('✅ Kakao JS SDK 로드 완료 (공유 기능)')
-          // 카카오 SDK 자동 초기화
-          if (typeof window !== 'undefined' && (window as any).Kakao) {
-            const kakaoJsKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
-            if (kakaoJsKey && !(window as any).Kakao.isInitialized()) {
-              (window as any).Kakao.init(kakaoJsKey)
-              console.log('✅ Kakao JS SDK 초기화 완료')
-            }
-          }
-        }}
-        onError={(e) => {
-          console.error('❌ Kakao JS SDK 로드 실패:', e)
-        }}
-      />
-      {children}
+      {/* 카카오맵 SDK 로드 완료 후에만 children 렌더링 */}
+      {isLoaded ? children : (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          minHeight: '100vh',
+          background: '#000',
+          color: '#fff'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', marginBottom: '10px' }}>🗺️</div>
+            <div>지도 로딩 중...</div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

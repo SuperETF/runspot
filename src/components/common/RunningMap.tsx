@@ -130,7 +130,8 @@ export default function RunningMap({
       courseData: !!courseData,
       courseName: courseData?.name,
       routeLength: route.length,
-      mode
+      mode,
+      hasRoute: route.length > 0
     })
     return route
   }, [courseData?.gps_route, mode])
@@ -217,8 +218,27 @@ export default function RunningMap({
 
   // 카카오맵 초기화
   useEffect(() => {
+    DEBUG && console.log('🗺️ 지도 초기화 시작:', {
+      hasMapContainer: !!mapContainer.current,
+      mapExists: !!map,
+      mode
+    })
+
     const initializeMap = async () => {
-      if (!mapContainer.current || map) return
+      // DOM 마운트 대기
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      if (!mapContainer.current) {
+        console.error('❌ mapContainer.current가 없음')
+        return
+      }
+      
+      if (map) {
+        DEBUG && console.log('✅ 지도가 이미 존재함, 초기화 스킵')
+        return
+      }
+
+      DEBUG && console.log('🔄 카카오맵 SDK 로드 대기 시작')
 
       // 카카오맵 SDK 로드 대기
       const waitForKakaoMaps = () => {
@@ -228,6 +248,7 @@ export default function RunningMap({
           
           const checkKakao = () => {
             attempts++
+            DEBUG && console.log(`🔍 카카오맵 SDK 체크 시도 ${attempts}/${maxAttempts}`)
             
             if ((window as any).kakao?.maps) {
               DEBUG && console.log('✅ 카카오맵 SDK 로드 확인됨')
@@ -236,6 +257,7 @@ export default function RunningMap({
             }
             
             if (attempts >= maxAttempts) {
+              console.error('❌ 카카오맵 SDK 로드 타임아웃')
               reject(new Error('카카오맵 SDK 로드 타임아웃'))
               return
             }
@@ -272,14 +294,37 @@ export default function RunningMap({
           mapTypeId: kakao.maps.MapTypeId.ROADMAP
         }
 
+        // 지도 컨테이너 크기 확인
+        const containerWidth = mapContainer.current?.offsetWidth || 0
+        const containerHeight = mapContainer.current?.offsetHeight || 0
+        
+        console.log('🗺️ [DEBUG] 지도 생성 시작:', {
+          mapContainer: !!mapContainer.current,
+          containerSize: { width: containerWidth, height: containerHeight },
+          mapOptions,
+          kakaoMapsAvailable: !!(window as any).kakao?.maps
+        })
+
+        if (containerWidth === 0 || containerHeight === 0) {
+          console.error('❌ [DEBUG] 지도 컨테이너 크기가 0입니다:', { width: containerWidth, height: containerHeight })
+          // 추가 대기 후 재시도
+          setTimeout(() => initializeMap(), 200)
+          return
+        }
+
         const newMap = new kakao.maps.Map(mapContainer.current, mapOptions)
         setMap(newMap)
 
-        DEBUG && console.log('✅ 카카오맵 초기화 완료:', {
+        console.log('✅ [DEBUG] 카카오맵 초기화 완료:', {
           mapContainer: !!mapContainer.current,
+          mapCreated: !!newMap,
           mode,
           courseDataExists: !!courseData,
-          courseRouteLength: courseRoute.length
+          courseRouteLength: courseRoute.length,
+          mapSize: {
+            width: mapContainer.current?.offsetWidth,
+            height: mapContainer.current?.offsetHeight
+          }
         })
       } catch (error) {
         console.error('❌ 카카오맵 초기화 실패:', error)
@@ -305,7 +350,7 @@ export default function RunningMap({
     }
 
     initializeMap()
-  }, [map])
+  }, [map, courseRoute.length])
 
   // 로고 이미지를 base64로 변환
   useEffect(() => {
@@ -347,14 +392,169 @@ export default function RunningMap({
     }
   }, [onLocationUpdate])
 
+  // waiting 모드에서 자동으로 위치 권한 요청 및 추적 시작
+  useEffect(() => {
+    if (mode === 'waiting') {
+      // 위치 권한이 unknown이면 자동으로 권한 요청
+      if (locationPermission === 'unknown' && navigator.geolocation) {
+        DEBUG && console.log('🎯 waiting 모드: 자동 위치 권한 요청')
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // 권한 허용됨
+            setLocationPermission('granted')
+            const currentPos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+            if (onLocationUpdate) {
+              onLocationUpdate(currentPos)
+            }
+            DEBUG && console.log('✅ 위치 권한 허용 및 초기 위치 획득:', currentPos)
+          },
+          (error) => {
+            // 권한 거부됨
+            setLocationPermission('denied')
+            console.error('위치 권한 거부:', error)
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 30000
+          }
+        )
+      }
+      
+      // 위치 권한이 허용되었고 아직 추적 중이 아니면 추적 시작
+      if (locationPermission === 'granted' && !watchId) {
+        DEBUG && console.log('🎯 waiting 모드: 자동 위치 추적 시작')
+        
+        const options: PositionOptions = {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000 // 30초 캐시
+        }
+
+        const newWatchId = navigator.geolocation.watchPosition(
+          (position) => {
+            if (!isMountedRef.current) return
+            
+            const currentPos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+            
+            DEBUG && console.log('📍 waiting 모드 위치 업데이트:', currentPos)
+            
+            if (onLocationUpdate) {
+              onLocationUpdate(currentPos)
+            }
+          },
+          (error) => {
+            console.error('waiting 모드 위치 추적 오류:', error)
+          },
+          options
+        )
+        
+        setWatchId(newWatchId)
+      }
+    }
+    
+    // waiting 모드가 아니면 위치 추적 중단
+    if (mode !== 'waiting' && watchId) {
+      navigator.geolocation.clearWatch(watchId)
+      setWatchId(null)
+      DEBUG && console.log('🛑 waiting 모드 종료: 위치 추적 중단')
+    }
+  }, [mode, locationPermission, watchId, onLocationUpdate])
+
   const handleLocationPermissionDenied = useCallback(() => {
     setLocationPermission('denied')
   }, [])
 
+  // 카카오맵으로 시작점까지 길찾기
+  const openKakaoMapNavigation = useCallback(() => {
+    if (!courseRoute || courseRoute.length === 0) {
+      alert('코스 정보가 없습니다.')
+      return
+    }
+
+    const startPoint = courseRoute[0]
+    
+    // 모바일 앱용 카카오맵 네이티브 연동
+    if (userLocation) {
+      // 카카오맵 앱으로 길찾기 (출발지: 현재위치, 도착지: 시작점)
+      const kakaoNavUrl = `kakaomap://route?sp=${userLocation.lat},${userLocation.lng}&ep=${startPoint.lat},${startPoint.lng}&by=FOOT`
+      
+      // 모바일 앱에서는 카카오맵 앱 직접 호출
+      if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+        // React Native WebView 환경
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'OPEN_KAKAO_NAV',
+          url: kakaoNavUrl,
+          fallbackUrl: `https://map.kakao.com/link/to/런닝 시작점,${startPoint.lat},${startPoint.lng}`
+        }))
+      } else {
+        // 웹 환경에서는 fallback URL 사용
+        const fallbackUrl = `https://map.kakao.com/link/to/런닝 시작점,${startPoint.lat},${startPoint.lng}`
+        window.open(fallbackUrl, '_blank')
+      }
+      
+      DEBUG && console.log('🗺️ 카카오맵 네비게이션:', kakaoNavUrl)
+    } else {
+      // 현재 위치를 가져온 후 경로 설정
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const currentPos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+            
+            // 카카오맵 앱으로 길찾기
+            const kakaoNavUrl = `kakaomap://route?sp=${currentPos.lat},${currentPos.lng}&ep=${startPoint.lat},${startPoint.lng}&by=FOOT`
+            
+            if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+              // React Native WebView 환경
+              (window as any).ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'OPEN_KAKAO_NAV',
+                url: kakaoNavUrl,
+                fallbackUrl: `https://map.kakao.com/link/to/런닝 시작점,${startPoint.lat},${startPoint.lng}`
+              }))
+            } else {
+              // 웹 환경에서는 fallback URL 사용
+              const fallbackUrl = `https://map.kakao.com/link/to/런닝 시작점,${startPoint.lat},${startPoint.lng}`
+              window.open(fallbackUrl, '_blank')
+            }
+            
+            DEBUG && console.log('🗺️ 카카오맵 네비게이션 (위치 획득 후):', kakaoNavUrl)
+          },
+          (error) => {
+            console.error('현재 위치 가져오기 실패:', error)
+            // 위치를 가져올 수 없으면 도착지만 표시
+            const kakaoMapUrl = `https://map.kakao.com/link/to/런닝 시작점,${startPoint.lat},${startPoint.lng}`
+            window.open(kakaoMapUrl, '_blank')
+            DEBUG && console.log('🗺️ 카카오맵 도착지만 열기:', kakaoMapUrl)
+          }
+        )
+      } else {
+        // Geolocation을 지원하지 않으면 도착지만 표시
+        const kakaoMapUrl = `https://map.kakao.com/link/to/런닝 시작점,${startPoint.lat},${startPoint.lng}`
+        window.open(kakaoMapUrl, '_blank')
+        DEBUG && console.log('🗺️ 카카오맵 도착지만 열기 (Geolocation 미지원):', kakaoMapUrl)
+      }
+    }
+  }, [courseRoute, userLocation])
+
   // 현재 위치로 이동
   const moveToCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation || !map) {
-      alert('위치 서비스를 사용할 수 없습니다.')
+    if (!navigator.geolocation) {
+      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.')
+      return
+    }
+
+    if (!map) {
+      alert('지도가 로딩 중입니다. 잠시 후 다시 시도해주세요.')
       return
     }
 
@@ -387,10 +587,68 @@ export default function RunningMap({
       },
       (error) => {
         console.error('현재 위치 가져오기 실패:', error)
-        alert('현재 위치를 가져올 수 없습니다.')
+        
+        let errorMessage = '현재 위치를 가져올 수 없습니다.'
+        
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = '위치 정보를 사용할 수 없습니다.'
+            break
+          case error.TIMEOUT:
+            errorMessage = '위치 정보 요청 시간이 초과되었습니다. 다시 시도해주세요.'
+            break
+        }
+        
+        alert(errorMessage)
       }
     )
   }, [map, currentMarker, onLocationUpdate])
+
+  // 현재 위치 마커 업데이트 (waiting 모드에서 자동 표시)
+  useEffect(() => {
+    if (!map || !userLocation) return
+    
+    const kakao = (window as any).kakao
+    
+    try {
+      // 기존 현재 위치 마커 제거
+      if (currentMarker) {
+        currentMarker.setMap(null)
+      }
+      
+      // 새로운 현재 위치 마커 생성
+      const position = new kakao.maps.LatLng(userLocation.lat, userLocation.lng)
+      const marker = new kakao.maps.Marker({
+        position: position,
+        map: map
+      })
+      
+      setCurrentMarker(marker)
+      DEBUG && console.log('📍 현재 위치 마커 업데이트:', userLocation)
+      
+      // waiting 모드에서는 현재 위치도 지도 범위에 포함
+      if (mode === 'waiting' && courseRoute.length > 0) {
+        const bounds = new kakao.maps.LatLngBounds()
+        
+        // 현재 위치 추가
+        bounds.extend(position)
+        
+        // 모든 경로 포인트 추가
+        courseRoute.forEach((point: any) => {
+          bounds.extend(new kakao.maps.LatLng(point.lat, point.lng))
+        })
+        
+        // 지도 범위 조정
+        map.setBounds(bounds, 50)
+        DEBUG && console.log('🗺️ waiting 모드: 현재 위치 + 코스 범위로 지도 조정')
+      }
+    } catch (error) {
+      console.error('❌ 현재 위치 마커 업데이트 실패:', error)
+    }
+  }, [map, userLocation, mode, courseRoute])
 
   // 코스 경로와 시작점 표시
   useEffect(() => {
@@ -423,7 +681,7 @@ export default function RunningMap({
       newPolyline.setMap(map)
       setCoursePolyline(newPolyline)
 
-      // 시작점 마커 표시
+      // 시작점 마커 표시 및 전체 경로 보기
       if (showStartPoint && courseRoute.length > 0) {
         const startPoint = courseRoute[0]
         
@@ -444,9 +702,12 @@ export default function RunningMap({
 
         setStartPointMarker(newStartMarker)
 
-        // 지도 중심을 시작점으로 이동
-        map.setCenter(new kakao.maps.LatLng(startPoint.lat, startPoint.lng))
-        map.setLevel(3)
+        // waiting 모드가 아닌 경우에만 지도 범위 조정 (waiting 모드는 현재 위치 마커 useEffect에서 처리)
+        if (mode !== 'waiting') {
+          // 다른 모드에서는 시작점 중심으로
+          map.setCenter(new kakao.maps.LatLng(startPoint.lat, startPoint.lng))
+          map.setLevel(3)
+        }
       }
 
       DEBUG && console.log('✅ 코스 경로 표시 완료:', courseRoute.length, '개 포인트')
@@ -736,10 +997,16 @@ export default function RunningMap({
     }
   }, [watchId, firstPersonState.trackingWatchId])
 
-  // 위치 권한이 아직 확인되지 않았으면 권한 요청 UI 표시
-  if (locationPermission === 'unknown') {
+  // waiting 모드가 아닌 경우에만 위치 권한 UI 표시
+  if (locationPermission === 'unknown' && mode !== 'waiting') {
     return (
-      <div className="w-full h-64 rounded-2xl overflow-hidden border border-gray-800">
+      <div 
+        className="w-full rounded-2xl overflow-hidden border border-gray-800"
+        style={{
+          height: '67vh',
+          minHeight: '400px'
+        }}
+      >
         <LocationPermission
           onPermissionGranted={handleLocationPermissionGranted}
           onPermissionDenied={handleLocationPermissionDenied}
@@ -752,14 +1019,13 @@ export default function RunningMap({
     <div className="relative">
       <div 
         ref={mapContainer} 
-        className={`w-full rounded-2xl overflow-hidden border border-gray-800 relative z-0 ${
-          isFirstPersonMode ? 'h-80' : 'h-64'
-        }`}
+        className={`w-full rounded-2xl overflow-hidden border border-gray-800 relative z-0`}
         style={{
           position: 'relative',
           isolation: 'isolate',
           zIndex: 0,
-          minHeight: '256px' // 최소 높이 보장
+          height: isFirstPersonMode ? '75vh' : '67vh', // 화면의 3분의 2 이상
+          minHeight: '400px' // 최소 높이 보장
         }}
       />
       
@@ -817,69 +1083,82 @@ export default function RunningMap({
         </div>
       )}
 
-      {/* 1인칭 모드 토글 버튼 (런닝 모드에서만) */}
+      {/* 네비게이션 모드 토글 버튼들 (런닝 모드에서만) */}
       {mode === 'running' && (
-        <button
-          onClick={isFirstPersonMode ? stopFirstPersonMode : startFirstPersonMode}
-          className={`absolute top-4 right-4 w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 z-10 ${
-            isFirstPersonMode 
-              ? 'bg-[#00FF88] border-[#00FF88] text-black' 
-              : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-          }`}
-          title={isFirstPersonMode ? '1인칭 모드 종료' : '1인칭 모드 시작'}
-        >
-          <Navigation className="w-5 h-5" />
-        </button>
+        <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+          {/* 1인칭 모드 토글 */}
+          <button
+            onClick={isFirstPersonMode ? stopFirstPersonMode : startFirstPersonMode}
+            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
+              isFirstPersonMode 
+                ? 'bg-[#00FF88] border-[#00FF88] text-black' 
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={isFirstPersonMode ? '1인칭 모드 종료' : '1인칭 모드 시작'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </button>
+
+          {/* 네비게이션 모드 토글 */}
+          <button
+            onClick={() => setIsNavigationMode(!isNavigationMode)}
+            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
+              isNavigationMode 
+                ? 'bg-blue-500 border-blue-500 text-white' 
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </button>
+        </div>
       )}
 
-      {/* GPS 상태 표시 */}
-      <div className={`absolute bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800 ${
-        isFirstPersonMode ? 'bottom-4 right-4' : 'top-4 right-4'
+      {/* GPS 상태 표시 및 내 위치 버튼 */}
+      <div className={`absolute flex items-center gap-2 ${
+        mode === 'running' 
+          ? (isFirstPersonMode ? 'bottom-4 right-4' : 'top-4 left-4')
+          : 'top-4 right-4'
       }`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
-            locationPermission === 'granted' 
-              ? (isRunning ? 'bg-[#00FF88] animate-pulse' : 'bg-green-500')
-              : 'bg-red-500'
-          }`}></div>
-          <span className="text-xs text-white">
-            {locationPermission === 'granted' 
-              ? (isRunning ? 'GPS 추적 중' : 'GPS 준비됨')
-              : '위치 권한 없음'
-            }
-          </span>
+        {/* GPS 상태 */}
+        <div className="bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${
+              locationPermission === 'granted' 
+                ? (isRunning ? 'bg-[#00FF88] animate-pulse' : 'bg-green-500')
+                : 'bg-red-500'
+            }`}></div>
+            <span className="text-xs text-white">
+              {locationPermission === 'granted' 
+                ? (isRunning ? 'GPS 추적 중' : 'GPS 준비됨')
+                : '위치 권한 없음'
+              }
+            </span>
+          </div>
         </div>
+
+        {/* 내 위치 버튼 */}
+        {locationPermission === 'granted' && (
+          <button
+            onClick={moveToCurrentLocation}
+            className="bg-black/80 backdrop-blur-sm rounded-xl p-2 border border-gray-800 hover:bg-gray-800/80 transition-colors"
+            title="내 위치로 이동"
+          >
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* 시작점 도착 상태 또는 경로 정보 */}
-      <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
-        {!isRunning && courseRoute.length > 0 ? (
-          // 런닝 시작 전: 시작점 도착 상태 표시
-          <div className="text-xs text-white">
-            <div className="flex items-center gap-2 mb-1">
-              <div className={`w-2 h-2 rounded-full ${
-                isAtStartPoint ? 'bg-[#00FF88] animate-pulse' : 'bg-yellow-500'
-              }`}></div>
-              <span className={isAtStartPoint ? 'text-[#00FF88]' : 'text-yellow-400'}>
-                {isAtStartPoint ? '시작점 도착' : '시작점으로 이동'}
-              </span>
-            </div>
-            {distanceToStart !== null && (
-              <div className="text-gray-300">
-                거리: {distanceToStart < 1 
-                  ? `${Math.round(distanceToStart * 1000)}m`
-                  : `${distanceToStart.toFixed(1)}km`
-                }
-              </div>
-            )}
-            {isAtStartPoint && (
-              <div className="text-[#00FF88] text-xs mt-1 animate-pulse">
-                ✓ 런닝 시작 가능
-              </div>
-            )}
-          </div>
-        ) : (
-          // 런닝 중: 경로 정보 표시
+      {/* 경로 정보 (런닝 중에만 표시) */}
+      {isRunning && (
+        <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
           <div className="text-xs text-white">
             <div>경로 포인트: {userPath.length}</div>
             {userPath.length > 1 && (
@@ -892,8 +1171,8 @@ export default function RunningMap({
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 현재 위치 버튼 (대기/미리보기 모드에서만) */}
       {(mode === 'waiting' || mode === 'preview') && (
