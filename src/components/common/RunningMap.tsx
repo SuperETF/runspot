@@ -184,6 +184,30 @@ export default function RunningMap({
   const [distanceToStart, setDistanceToStart] = useState<number | null>(null)
   const START_POINT_THRESHOLD = 0.05 // 50m 이내면 시작점 도착으로 간주
 
+  // 시작점 도착 상태 확인 및 업데이트
+  useEffect(() => {
+    if (userLocation && courseRoute.length > 0) {
+      const distanceInKm = haversineDistance(userLocation, courseRoute[0]) / 1000
+      const isNearStart = distanceInKm <= START_POINT_THRESHOLD
+      
+      setDistanceToStart(distanceInKm)
+      setIsAtStartPoint(isNearStart)
+      
+      // 부모 컴포넌트에 상태 변경 알림
+      if (onStartPointStatusChange) {
+        onStartPointStatusChange(isNearStart, distanceInKm)
+      }
+      
+      console.log('📍 시작점 상태 업데이트:', {
+        현재위치: `${userLocation.lat.toFixed(6)}, ${userLocation.lng.toFixed(6)}`,
+        시작점위치: `${courseRoute[0].lat.toFixed(6)}, ${courseRoute[0].lng.toFixed(6)}`,
+        거리: `${(distanceInKm * 1000).toFixed(0)}m`,
+        시작점도착: isNearStart,
+        임계값: `${START_POINT_THRESHOLD * 1000}m`
+      })
+    }
+  }, [userLocation, courseRoute, onStartPointStatusChange, START_POINT_THRESHOLD])
+
   // 시간 포맷 함수
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
@@ -1205,9 +1229,10 @@ export default function RunningMap({
                 GPS 추적 중
               </div>
             </div>
-            {userLocation && courseRoute.length > 0 && (
-              <div className="text-xs text-gray-300 mt-1">
-                시작점까지 {(haversineDistance(userLocation, courseRoute[0]) / 1000).toFixed(2)}km
+            {userLocation && courseRoute.length > 0 && distanceToStart !== null && (
+              <div className={`text-xs mt-1 ${isAtStartPoint ? 'text-[#00FF88]' : 'text-gray-300'}`}>
+                시작점까지 {(distanceToStart * 1000).toFixed(0)}m
+                {isAtStartPoint && ' ✅'}
               </div>
             )}
           </div>

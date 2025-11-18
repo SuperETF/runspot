@@ -145,6 +145,11 @@ function RunningStartContent() {
   const handleStartPointStatusChange = (isAtStart: boolean, distance: number) => {
     setIsAtStartPoint(isAtStart)
     setDistanceToStart(distance)
+    
+    console.log('🎯 메인 페이지 시작점 상태 업데이트:', {
+      시작점도착: isAtStart,
+      거리: `${(distance * 1000).toFixed(0)}m`
+    })
   }
 
   // 런닝 시작 핸들러
