@@ -744,6 +744,11 @@ export default function RunningMap({
     
     setIsFirstPersonMode(true)
     
+    // 네비게이션 상태 업데이트 콜백 호출
+    if (onNavigationUpdate) {
+      onNavigationUpdate({ isFirstPersonMode: true } as any)
+    }
+    
     // 기존 추적 정리
     if (firstPersonState.trackingWatchId !== null) {
       navigator.geolocation.clearWatch(firstPersonState.trackingWatchId)
@@ -862,7 +867,7 @@ export default function RunningMap({
     )
 
     setFirstPersonState(prev => ({ ...prev, trackingWatchId: newWatchId }))
-  }, [map, currentMarker, firstPersonState.trackingWatchId, firstPersonState.lastPosition, firstPersonState.currentSpeed, firstPersonState.smoothBearing, courseRoute, isFirstPersonMode, mode, onLocationUpdate])
+  }, [map, currentMarker, firstPersonState.trackingWatchId, firstPersonState.lastPosition, firstPersonState.currentSpeed, firstPersonState.smoothBearing, courseRoute, isFirstPersonMode, mode, onLocationUpdate, onNavigationUpdate])
 
   // 속도 계산 함수
   const calculateSpeed = useCallback((positions: {lat: number, lng: number, timestamp: number}[]) => {
@@ -935,6 +940,11 @@ export default function RunningMap({
     
     setIsFirstPersonMode(false)
     
+    // 네비게이션 상태 업데이트 콜백 호출
+    if (onNavigationUpdate) {
+      onNavigationUpdate({ isFirstPersonMode: false } as any)
+    }
+    
     // 위치 추적 정리
     if (firstPersonState.trackingWatchId !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(firstPersonState.trackingWatchId)
@@ -974,7 +984,7 @@ export default function RunningMap({
       currentMarker.setMap(null)
       setCurrentMarker(marker)
     }
-  }, [isFirstPersonMode, firstPersonState.trackingWatchId, currentMarker, map])
+  }, [isFirstPersonMode, firstPersonState.trackingWatchId, currentMarker, map, onNavigationUpdate])
 
   // onNavigationReady 콜백 호출 (1인칭 추적 모드 함수들 전달)
   useEffect(() => {

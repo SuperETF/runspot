@@ -87,8 +87,13 @@ function RunningStartContent() {
   }, [courseId, setCourseData])
 
   // 네비게이션 준비 콜백
-  const handleNavigationReady = (functions: any) => {
-    setNavigationFunctions(functions)
+  const handleNavigationReady = (startNav: () => void, stopNav: () => void, isNavMode: boolean) => {
+    setNavigationFunctions({
+      startNav,
+      stopNav,
+      isNavMode
+    })
+    console.log('🎯 네비게이션 함수 준비 완료:', { startNav: !!startNav, stopNav: !!stopNav, isNavMode })
   }
 
   // 네비게이션 업데이트 콜백
@@ -109,6 +114,14 @@ function RunningStartContent() {
   const handleStartRunning = () => {
     if (course) {
       startRunning(course)
+      
+      // 런닝 시작과 동시에 1인칭 네비게이션 모드 자동 활성화
+      setTimeout(() => {
+        if (navigationFunctions?.startNav) {
+          navigationFunctions.startNav()
+          console.log('🎯 런닝 시작: 1인칭 네비게이션 모드 자동 활성화')
+        }
+      }, 1000) // 1초 후 네비게이션 모드 활성화 (지도 초기화 대기)
     }
   }
 
