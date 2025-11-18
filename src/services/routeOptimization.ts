@@ -21,8 +21,8 @@ function calculateDistance(point1: GPSPoint, point2: GPSPoint): number {
   return R * c
 }
 
-// GPX 경로에서 주요 경유지 추출
-export function extractWaypoints(gpsRoute: GPSPoint[], maxWaypoints: number = 8): GPSPoint[] {
+// GPX 경로에서 주요 경유지 추출 (균등 간격)
+export function extractWaypoints(gpsRoute: GPSPoint[], maxWaypoints: number = 20): GPSPoint[] {
   if (gpsRoute.length <= 2) {
     return gpsRoute
   }
@@ -45,6 +45,37 @@ export function extractWaypoints(gpsRoute: GPSPoint[], maxWaypoints: number = 8)
   
   // 끝점 추가
   waypoints.push(gpsRoute[gpsRoute.length - 1])
+  
+  return waypoints
+}
+
+// 모든 GPX 포인트를 경유지로 사용 (거리 기반 필터링)
+export function extractAllWaypoints(gpsRoute: GPSPoint[], minDistance: number = 30): GPSPoint[] {
+  if (gpsRoute.length <= 2) {
+    return gpsRoute
+  }
+
+  const waypoints: GPSPoint[] = [gpsRoute[0]] // 시작점
+  let lastWaypoint = gpsRoute[0]
+  
+  // 최소 거리 이상 떨어진 포인트들만 경유지로 추가
+  for (let i = 1; i < gpsRoute.length - 1; i++) {
+    const currentPoint = gpsRoute[i]
+    const distance = calculateDistance(lastWaypoint, currentPoint)
+    
+    if (distance >= minDistance) {
+      waypoints.push(currentPoint)
+      lastWaypoint = currentPoint
+    }
+  }
+  
+  // 끝점 추가 (마지막 경유지와 충분히 떨어져 있는 경우만)
+  const endPoint = gpsRoute[gpsRoute.length - 1]
+  const distanceToEnd = calculateDistance(lastWaypoint, endPoint)
+  
+  if (distanceToEnd >= minDistance / 2) { // 끝점은 절반 거리만 확인
+    waypoints.push(endPoint)
+  }
   
   return waypoints
 }
@@ -105,27 +136,34 @@ export function optimizeWaypoints(gpsRoute: GPSPoint[], maxWaypoints: number = 8
   return waypoints
 }
 
-// 카카오맵 자전거 네비게이션 URL 생성
+// 카카오맵 자전거 네비게이션 URL 생성 (모든 GPX 포인트 사용)
 export function generateKakaoBicycleNavUrl(
   currentLocation: GPSPoint,
   gpsRoute: GPSPoint[],
-  useOptimization: boolean = true
+  useAllPoints: boolean = true
 ): string {
-  // 경유지 최적화
-  const waypoints = useOptimization 
-    ? optimizeWaypoints(gpsRoute, 8) // 카카오맵 최대 경유지 제한
-    : extractWaypoints(gpsRoute, 8)
+  let waypoints: GPSPoint[]
   
-  console.log('🗺️ 경유지 최적화 결과:', {
+  if (useAllPoints) {
+    // 모든 GPX 포인트를 사용 (30m 간격으로 필터링)
+    waypoints = extractAllWaypoints(gpsRoute, 30)
+  } else {
+    // 기존 최적화 방식 (20개 경유지)
+    waypoints = optimizeWaypoints(gpsRoute, 20)
+  }
+  
+  console.log('🗺️ GPX 경로 변환 결과:', {
     원본포인트: gpsRoute.length,
-    최적화포인트: waypoints.length,
-    경유지: waypoints
+    경유지포인트: waypoints.length,
+    사용방식: useAllPoints ? '전체포인트(30m간격)' : '최적화(20개)',
+    첫번째경유지: waypoints[0],
+    마지막경유지: waypoints[waypoints.length - 1]
   })
 
   const startPoint = `${currentLocation.lat},${currentLocation.lng}`
   const endPoint = `${waypoints[waypoints.length - 1].lat},${waypoints[waypoints.length - 1].lng}`
   
-  // 중간 경유지들 (시작점과 끝점 제외)
+  // 모든 중간 경유지들 (시작점과 끝점 제외)
   const viaPoints = waypoints.slice(1, -1)
     .map(point => `${point.lat},${point.lng}`)
     .join('|')
@@ -135,6 +173,28 @@ export function generateKakaoBicycleNavUrl(
   
   if (viaPoints) {
     navUrl += `&via=${viaPoints}`
+  }
+  
+  console.log('🚴‍♂️ 카카오맵 URL 길이:', navUrl.length)
+  console.log('📍 경유지 개수:', waypoints.length - 2) // 시작점, 끝점 제외
+  
+  // URL이 너무 길면 경유지 수를 줄여서 재시도
+  if (navUrl.length > 8000) { // URL 길이 제한 (일반적으로 8KB 이하 권장)
+    console.warn('⚠️ URL이 너무 깁니다. 경유지를 줄여서 재생성합니다.')
+    
+    // 경유지를 절반으로 줄여서 재시도
+    const reducedWaypoints = extractWaypoints(gpsRoute, Math.min(10, Math.floor(waypoints.length / 2)))
+    const reducedViaPoints = reducedWaypoints.slice(1, -1)
+      .map(point => `${point.lat},${point.lng}`)
+      .join('|')
+    
+    navUrl = `kakaomap://route?sp=${startPoint}&ep=${endPoint}&by=BICYCLE`
+    if (reducedViaPoints) {
+      navUrl += `&via=${reducedViaPoints}`
+    }
+    
+    console.log('🔄 축소된 URL 길이:', navUrl.length)
+    console.log('📍 축소된 경유지 개수:', reducedWaypoints.length - 2)
   }
   
   return navUrl

@@ -182,7 +182,7 @@ export default function RunningMap({
   // 시작점 도착 상태
   const [isAtStartPoint, setIsAtStartPoint] = useState(false)
   const [distanceToStart, setDistanceToStart] = useState<number | null>(null)
-  const START_POINT_THRESHOLD = 0.1 // 100m 이내면 시작점 도착으로 간주
+  const START_POINT_THRESHOLD = 0.05 // 50m 이내면 시작점 도착으로 간주
 
   // 시간 포맷 함수
   const formatTime = (seconds: number) => {

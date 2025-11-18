@@ -151,6 +151,12 @@ function RunningStartContent() {
   const handleStartRunning = async () => {
     if (!course) return
 
+    // 시작점 조건 재확인
+    if (!isAtStartPoint) {
+      alert('시작점에서 50m 이내에 있어야 런닝을 시작할 수 있습니다.')
+      return
+    }
+
     startRunning(course)
     
     // 백그라운드 GPS 추적 시작 (카카오맵 사용을 위해)
@@ -176,7 +182,7 @@ function RunningStartContent() {
         포인트수: routeInfo.waypointCount
       })
       
-      // 최적화된 자전거 네비게이션 URL 생성
+      // 모든 GPX 포인트를 사용한 자전거 네비게이션 URL 생성
       const bicycleNavUrl = generateKakaoBicycleNavUrl(userLocation, course.gps_route, true)
       const fallbackUrl = generateKakaoWebFallbackUrl(course.gps_route)
       
@@ -614,6 +620,8 @@ function RunningStartContent() {
           isRunning={isRunning}
           isPaused={isPaused}
           isCompleted={isCompleted}
+          isAtStartPoint={isAtStartPoint}
+          distanceToStart={distanceToStart}
           onStart={handleStartRunning}
           onPause={pauseRunning}
           onResume={resumeRunning}

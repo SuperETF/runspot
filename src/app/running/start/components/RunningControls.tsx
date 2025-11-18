@@ -6,6 +6,8 @@ interface RunningControlsProps {
   isRunning: boolean
   isPaused: boolean
   isCompleted: boolean
+  isAtStartPoint?: boolean
+  distanceToStart?: number | null
   onStart: () => void
   onPause: () => void
   onResume: () => void
@@ -16,6 +18,8 @@ export default function RunningControls({
   isRunning,
   isPaused,
   isCompleted,
+  isAtStartPoint = true,
+  distanceToStart = null,
   onStart,
   onPause,
   onResume,
@@ -39,10 +43,18 @@ export default function RunningControls({
           // 런닝 시작 버튼
           <button
             onClick={onStart}
-            className="bg-[#00FF88] hover:bg-[#00E077] text-black font-bold px-8 py-4 rounded-xl transition-colors flex items-center gap-3"
+            disabled={!isAtStartPoint}
+            className={`font-bold px-8 py-4 rounded-xl transition-colors flex items-center gap-3 ${
+              isAtStartPoint 
+                ? 'bg-[#00FF88] hover:bg-[#00E077] text-black' 
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+            }`}
           >
             <Play className="w-6 h-6 fill-current" />
-            런닝 시작
+            {isAtStartPoint 
+              ? '런닝 시작' 
+              : `시작점까지 ${distanceToStart ? `${(distanceToStart * 1000).toFixed(0)}m` : '이동 필요'}`
+            }
           </button>
         ) : (
           // 런닝 중 컨트롤

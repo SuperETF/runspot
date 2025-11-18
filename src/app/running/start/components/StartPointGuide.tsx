@@ -49,7 +49,16 @@ export default function StartPointGuide({
               <p className="text-gray-300 text-sm mb-2">
                 시작점까지 {distanceToStart ? `${(distanceToStart * 1000).toFixed(0)}m` : '계산 중...'}
               </p>
-              <p className="text-gray-400 text-xs mb-4">시작점에서 50m 이내에 있어야 런닝을 시작할 수 있습니다</p>
+              <p className={`text-xs mb-4 ${
+                distanceToStart && distanceToStart <= 0.05 
+                  ? 'text-[#00FF88]' 
+                  : 'text-gray-400'
+              }`}>
+                {distanceToStart && distanceToStart <= 0.05 
+                  ? '✅ 시작점 도착! 런닝을 시작할 수 있습니다' 
+                  : '시작점에서 50m 이내에 있어야 런닝을 시작할 수 있습니다'
+                }
+              </p>
               
               {onNavigateToStart && (
                 <button
