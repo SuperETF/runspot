@@ -12,6 +12,15 @@ export default function KakaoScript({ apiKey, children }: KakaoScriptProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
+  // API 키 디버깅
+  useEffect(() => {
+    console.log('🔑 KakaoScript - API 키 상태:', {
+      hasApiKey: !!apiKey,
+      keyLength: apiKey?.length || 0,
+      keyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : '없음'
+    })
+  }, [apiKey])
+
   // 이미 로드된 스크립트가 있는지 확인
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -47,8 +56,18 @@ export default function KakaoScript({ apiKey, children }: KakaoScriptProps) {
     console.log('✅ Kakao Maps SDK 스크립트 로드 성공')
     console.log('🔍 window.kakao 객체:', !!(window as any).kakao)
     console.log('🔍 window.kakao.maps 객체:', !!(window as any).kakao?.maps)
-    setIsLoaded(true)
-    setIsLoading(false)
+    
+    // 카카오맵 라이브러리 수동 로드 (autoload=false이므로)
+    if ((window as any).kakao?.maps?.load) {
+      (window as any).kakao.maps.load(() => {
+        console.log('✅ Kakao Maps 라이브러리 로드 완료')
+        setIsLoaded(true)
+        setIsLoading(false)
+      })
+    } else {
+      setIsLoaded(true)
+      setIsLoading(false)
+    }
   }
 
   const handleError = (e: any) => {
@@ -66,6 +85,12 @@ export default function KakaoScript({ apiKey, children }: KakaoScriptProps) {
     return <>{children}</>
   }
 
+  // API 키가 없으면 에러 표시
+  if (!apiKey) {
+    console.error('❌ Kakao Maps API 키가 설정되지 않았습니다.')
+    return <>{children}</>
+  }
+
   return (
     <>
       <Script
@@ -74,6 +99,25 @@ export default function KakaoScript({ apiKey, children }: KakaoScriptProps) {
         strategy="beforeInteractive"
         onLoad={handleLoad}
         onError={handleError}
+      />
+      <Script
+        id="kakao-js-sdk"
+        src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('✅ Kakao JS SDK 로드 완료 (공유 기능)')
+          // 카카오 SDK 자동 초기화
+          if (typeof window !== 'undefined' && (window as any).Kakao) {
+            const kakaoJsKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY
+            if (kakaoJsKey && !(window as any).Kakao.isInitialized()) {
+              (window as any).Kakao.init(kakaoJsKey)
+              console.log('✅ Kakao JS SDK 초기화 완료')
+            }
+          }
+        }}
+        onError={(e) => {
+          console.error('❌ Kakao JS SDK 로드 실패:', e)
+        }}
       />
       {children}
     </>

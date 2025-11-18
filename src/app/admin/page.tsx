@@ -122,6 +122,9 @@ function CoursesTab() {
   const router = useRouter()
   const [courses, setCourses] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [showGPXUpload, setShowGPXUpload] = useState(false)
+  const [gpxFile, setGpxFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   // 저장된 코스 목록 불러오기
   const loadCourses = async () => {
@@ -129,11 +132,7 @@ function CoursesTab() {
     try {
       const { data, error } = await (supabase as any)
         .from('courses')
-        .select(`
-          *,
-          course_points (*)
-        `)
-        .eq('is_active', true)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -156,6 +155,46 @@ function CoursesTab() {
   useEffect(() => {
     loadCourses()
   }, [])
+
+  // GPX 파일 업로드 처리 (API 라우트 사용)
+  const handleGPXUpload = async () => {
+    if (!gpxFile) {
+      alert('GPX 파일을 선택해주세요.')
+      return
+    }
+
+    setUploading(true)
+    try {
+      // FormData로 파일 전송
+      const formData = new FormData()
+      formData.append('gpxFile', gpxFile)
+      
+      // API 라우트 호출
+      const response = await fetch('/api/admin/upload-gpx', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || '업로드 실패')
+      }
+      
+      alert(result.message)
+      
+      // 상태 초기화 및 목록 새로고침
+      setShowGPXUpload(false)
+      setGpxFile(null)
+      loadCourses()
+      
+    } catch (error: any) {
+      console.error('GPX 업로드 실패:', error)
+      alert(`❌ GPX 업로드 실패: ${error.message}`)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   // 코스 삭제 함수
   const deleteCourse = async (courseId: string, courseName: string) => {
@@ -243,7 +282,7 @@ function CoursesTab() {
 
         <div
           onClick={() => router.push('/admin/course/create?mode=hybrid')}
-          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95 sm:col-span-2 lg:col-span-1"
+          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#00FF88] rounded-lg flex items-center justify-center mr-3">
@@ -258,6 +297,26 @@ function CoursesTab() {
             • 최고의 정확성<br />
             • 유연한 편집<br />
             • 검증된 경로
+          </div>
+        </div>
+
+        <div
+          onClick={() => setShowGPXUpload(true)}
+          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
+        >
+          <div className="flex items-center mb-3 sm:mb-4">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-xs sm:text-sm">📁</span>
+            </div>
+            <h3 className="text-base sm:text-lg font-semibold">GPX 파일 업로드</h3>
+          </div>
+          <p className="text-gray-400 mb-3 sm:mb-4 text-sm sm:text-base">
+            GPX 파일을 업로드하여 자동으로 코스를 생성합니다.
+          </p>
+          <div className="text-xs sm:text-sm text-gray-500">
+            • 빠른 코스 생성<br />
+            • 정확한 GPS 데이터<br />
+            • 고도 정보 포함
           </div>
         </div>
       </div>
@@ -319,8 +378,8 @@ function CoursesTab() {
                          course.difficulty === 'medium' ? '보통' : '어려움'}
                       </div>
                       <div className="text-gray-300">{course.distance}km</div>
-                      <div className="text-gray-300">{course.estimated_time}분</div>
-                      <div className="text-gray-300">{course.course_points?.length || 0}개</div>
+                      <div className="text-gray-300">{course.duration}분</div>
+                      <div className="text-gray-300">{course.gps_route?.length || 0}개</div>
                       <div className="text-gray-400 text-xs">
                         {new Date(course.created_at).toLocaleDateString('ko-KR')}
                       </div>
@@ -368,8 +427,8 @@ function CoursesTab() {
                     <div className="text-sm text-gray-400 mb-2">{course.description}</div>
                     <div className="flex justify-between text-sm text-gray-300 mb-3">
                       <span>{course.distance}km</span>
-                      <span>{course.estimated_time}분</span>
-                      <span>{course.course_points?.length || 0}개 포인트</span>
+                      <span>{course.duration}분</span>
+                      <span>{course.gps_route?.length || 0}개 포인트</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs text-gray-500">
@@ -402,6 +461,74 @@ function CoursesTab() {
           )}
         </div>
       </div>
+
+      {/* GPX 업로드 모달 */}
+      {showGPXUpload && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">GPX 파일 업로드</h3>
+              <button
+                onClick={() => {
+                  setShowGPXUpload(false)
+                  setGpxFile(null)
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  GPX 파일 선택
+                </label>
+                <input
+                  type="file"
+                  accept=".gpx"
+                  onChange={(e) => setGpxFile(e.target.files?.[0] || null)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  .gpx 형식의 파일만 업로드 가능합니다.
+                </p>
+              </div>
+              
+              {gpxFile && (
+                <div className="bg-gray-800 rounded-lg p-3">
+                  <div className="text-sm text-gray-300">
+                    <strong>선택된 파일:</strong> {gpxFile.name}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    크기: {(gpxFile.size / 1024).toFixed(1)} KB
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowGPXUpload(false)
+                    setGpxFile(null)
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  disabled={uploading}
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleGPXUpload}
+                  disabled={!gpxFile || uploading}
+                  className="flex-1 px-4 py-2 bg-[#00FF88] text-black rounded-lg hover:bg-[#00E077] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? '업로드 중...' : '업로드'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

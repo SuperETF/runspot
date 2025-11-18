@@ -77,12 +77,17 @@ export async function getCourse(id: string) {
         id: courseData.id,
         name: courseData.name,
         gps_route: courseData.gps_route,
-        gps_route_length: courseData.gps_route?.length || 0
+        gps_route_length: courseData.gps_route?.length || 0,
+        startPoint: courseData.gps_route?.[0],
+        endPoint: courseData.gps_route?.[courseData.gps_route?.length - 1]
       })
 
       // GPS 경로가 없거나 비어있는 경우 임시 데이터 추가
       if (!courseData.gps_route || courseData.gps_route.length === 0) {
         console.warn('⚠️ GPS 경로가 없어서 임시 데이터 생성')
+        
+        // 코스 ID를 문자열로 변환하여 처리
+        const courseIdStr = String(courseData.id)
         
         // 코스 ID에 따라 다른 시작점 생성 (임시)
         const tempRoutes: { [key: string]: any[] } = {
@@ -100,14 +105,83 @@ export async function getCourse(id: string) {
             { lat: 37.5796, lng: 126.9770 }, // 광화문
             { lat: 37.5800, lng: 126.9775 },
             { lat: 37.5805, lng: 126.9780 }
+          ],
+          '4': [
+            { lat: 37.5663, lng: 126.9779 }, // 서울역
+            { lat: 37.5668, lng: 126.9785 },
+            { lat: 37.5673, lng: 126.9790 }
+          ],
+          '5': [
+            { lat: 37.5219, lng: 127.0411 }, // 잠실
+            { lat: 37.5224, lng: 127.0416 },
+            { lat: 37.5229, lng: 127.0421 }
           ]
         }
         
-        courseData.gps_route = tempRoutes[courseData.id] || [
-          { lat: 37.5665 + (Math.random() - 0.5) * 0.01, lng: 126.9780 + (Math.random() - 0.5) * 0.01 }
-        ]
+        // 코스 ID에 해당하는 경로가 있으면 사용, 없으면 고유한 위치 생성
+        if (tempRoutes[courseIdStr]) {
+          courseData.gps_route = tempRoutes[courseIdStr]
+        } else {
+          // 코스 ID를 시드로 사용하여 각 코스마다 다른 위치 생성
+          // UUID의 경우 해시값을 생성하여 시드로 사용
+          let seed = 1
+          if (courseIdStr) {
+            // 문자열의 각 문자 코드를 합산하여 시드 생성
+            seed = courseIdStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+          }
+          
+          console.log('🔍 시드 생성:', { courseId: courseIdStr, seed })
+          
+          // 서울 주요 지역들의 기준점들
+          const baseLocations = [
+            { lat: 37.5665, lng: 126.9780 }, // 서울역
+            { lat: 37.5796, lng: 126.9770 }, // 광화문
+            { lat: 37.5172, lng: 127.0473 }, // 강남
+            { lat: 37.5285, lng: 126.9367 }, // 여의도
+            { lat: 37.5219, lng: 127.0411 }, // 잠실
+            { lat: 37.5663, lng: 126.9779 }, // 명동
+            { lat: 37.5443, lng: 127.0557 }, // 건대
+            { lat: 37.4979, lng: 127.0276 }, // 사당
+            { lat: 37.5014, lng: 127.0396 }, // 교대
+            { lat: 37.5326, lng: 126.9652 }  // 한강공원
+          ]
+          
+          // 코스 ID에 따라 기준점 선택
+          const locationIndex = seed % baseLocations.length
+          const baseLocation = baseLocations[locationIndex]
+          
+          console.log('📍 기준점 선택:', { 
+            seed, 
+            locationIndex, 
+            baseLocation,
+            locationName: ['서울역', '광화문', '강남', '여의도', '잠실', '명동', '건대', '사당', '교대', '한강공원'][locationIndex]
+          })
+          
+          // 기준점 주변에 작은 변화를 주어 경로 생성
+          const smallOffset1 = 0.001 // 약 100m
+          const smallOffset2 = 0.002 // 약 200m
+          
+          courseData.gps_route = [
+            { 
+              lat: baseLocation.lat, 
+              lng: baseLocation.lng 
+            },
+            { 
+              lat: baseLocation.lat + smallOffset1, 
+              lng: baseLocation.lng + smallOffset1 
+            },
+            { 
+              lat: baseLocation.lat + smallOffset2, 
+              lng: baseLocation.lng + smallOffset2 
+            }
+          ]
+        }
         
-        console.log('🔧 임시 GPS 경로 생성:', courseData.gps_route)
+        console.log('🔧 임시 GPS 경로 생성:', {
+          courseId: courseIdStr,
+          route: courseData.gps_route,
+          startPoint: courseData.gps_route[0]
+        })
       }
     }
 
