@@ -13,6 +13,11 @@ import {
   type RoutePointWithDistance, 
   type NavigationProgress as PedestrianProgress 
 } from '@/utils/mapUtils'
+// 카카오맵 네비게이션 함수들
+import { 
+  generateKakaoBicycleNavUrl, 
+  generateKakaoWebFallbackUrl 
+} from '@/services/routeOptimization'
 // 카카오 길찾기 기반 네비게이션 및 음성 안내
 import { 
   createRunningNavigation,
@@ -1216,6 +1221,38 @@ export default function RunningMap({
             </svg>
           </button>
 
+          {/* 카카오맵 네비게이션 버튼 */}
+          <button
+            onClick={() => {
+              if (courseRoute.length > 0 && userLocation) {
+                // 전체 GPX 경로를 카카오맵으로 전송
+                const fullRouteNavUrl = generateKakaoBicycleNavUrl(userLocation, courseRoute, true)
+                
+                if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+                  // React Native WebView 환경
+                  (window as any).ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'OPEN_KAKAO_NAV',
+                    url: fullRouteNavUrl,
+                    fallbackUrl: generateKakaoWebFallbackUrl(courseRoute)
+                  }))
+                } else {
+                  // 웹 환경에서는 새 창으로 열기
+                  window.open(fullRouteNavUrl, '_blank')
+                }
+                
+                console.log('🚴‍♂️ 런닝 중 카카오맵 네비게이션 실행:', fullRouteNavUrl)
+              } else {
+                alert('경로 정보가 없거나 현재 위치를 확인할 수 없습니다.')
+              }
+            }}
+            className="w-12 h-12 rounded-full shadow-lg border-2 bg-orange-500 border-orange-500 text-white hover:bg-orange-600 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+            title="카카오맵 네비게이션"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </button>
+
           {/* 네비게이션 모드 토글 */}
           <button
             onClick={() => setIsNavigationMode(!isNavigationMode)}
@@ -1227,7 +1264,8 @@ export default function RunningMap({
             title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </button>
         </div>

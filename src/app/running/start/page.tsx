@@ -192,83 +192,16 @@ function RunningStartContent() {
       console.error('백그라운드 GPS 추적 시작 실패:', error)
     }
 
-    // 다양한 네비게이션 옵션 제공
-    if (course.gps_route && course.gps_route.length > 0 && userLocation) {
-      // 경로 정보 출력
+    // 런닝 시작 시 경로 정보 로깅만 수행 (자동 카카오맵 이동 제거)
+    if (course.gps_route && course.gps_route.length > 0) {
       const routeInfo = getRouteInfo(course.gps_route)
-      console.log('🗺️ 경로 정보:', {
+      console.log('🗺️ 런닝 시작 - 경로 정보:', {
         총거리: `${(routeInfo.totalDistance / 1000).toFixed(2)}km`,
         예상시간: `${routeInfo.estimatedDuration}분`,
         포인트수: routeInfo.waypointCount
       })
       
-      // 1. 카카오맵 경유지 URL 시도
-      const fullRouteNavUrl = generateKakaoBicycleNavUrl(userLocation, course.gps_route, true)
-      
-      // 2. GPX 파일 직접 공유 URL
-      const gpxFileUrl = generateGPXFileShareUrl(courseId || '1')
-      
-      // 3. KML 파일 생성 (다운로드용)
-      const kmlContent = convertGPXToKML(course.gps_route, course.name)
-      const kmlBlob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' })
-      const kmlUrl = URL.createObjectURL(kmlBlob)
-      
-      // 4. 구글맵 대안 URL
-      const googleMapsUrl = generateGoogleMapsGPXUrl(course.gps_route)
-      
-      console.log('�️ 네비게이션 옵션들:', {
-        카카오맵경유지: fullRouteNavUrl,
-        GPX파일: gpxFileUrl,
-        구글맵: googleMapsUrl,
-        KML다운로드: kmlUrl
-      })
-      
-      // 모바일 앱에서는 여러 옵션 제공
-      if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
-        // React Native WebView 환경 - 모든 옵션 전달
-        (window as any).ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'OPEN_NAVIGATION_OPTIONS',
-          options: {
-            kakaoNav: fullRouteNavUrl,
-            gpxFile: gpxFileUrl,
-            googleMaps: googleMapsUrl,
-            kmlDownload: kmlUrl
-          },
-          fallbackUrl: generateKakaoWebFallbackUrl(course.gps_route)
-        }))
-      } else {
-        // 웹 환경에서는 우선순위에 따라 시도
-        
-        // 먼저 카카오맵 경유지 URL 시도
-        console.log('🚴‍♂️ 1차 시도: 카카오맵 경유지 네비게이션')
-        window.open(fullRouteNavUrl, '_blank')
-        
-        // 2초 후 GPX 파일 다운로드 옵션 제공
-        setTimeout(() => {
-          const userChoice = confirm(
-            '카카오맵에서 경유지가 제대로 표시되지 않나요?\n\n' +
-            '다른 옵션을 시도해보세요:\n' +
-            '- 확인: GPX 파일 다운로드\n' +
-            '- 취소: 구글맵으로 열기'
-          )
-          
-          if (userChoice) {
-            // GPX 파일 다운로드
-            const link = document.createElement('a')
-            link.href = gpxFileUrl
-            link.download = `${course.name}_경로.gpx`
-            link.click()
-            
-            alert('GPX 파일이 다운로드되었습니다.\n카카오맵 앱에서 "파일 가져오기"로 불러오세요.')
-          } else {
-            // 구글맵으로 열기
-            window.open(googleMapsUrl, '_blank')
-          }
-        }, 2000)
-      }
-      
-      // 카카오맵 네비게이션 활성화 상태 설정
-      setKakaoNavActive(true)
+      console.log('🏃‍♂️ 런닝 모드로 전환됩니다. 네비게이션은 별도 버튼으로 이용하세요.')
     }
     
     // RunSpot 내부 1인칭 네비게이션 모드도 활성화 (백업용)
