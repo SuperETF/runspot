@@ -1197,6 +1197,14 @@ export default function RunningMap({
     console.log('🛑 전체 화면 네비게이션 종료')
   }, [])
 
+  // 런닝 모드 시작 시 자동으로 네비게이션 모드 활성화
+  useEffect(() => {
+    if (mode === 'running' && !isNavigationMode) {
+      console.log('🏃‍♂️ 런닝 모드 시작 - 자동으로 네비게이션 모드 활성화')
+      setIsNavigationMode(true)
+    }
+  }, [mode, isNavigationMode])
+
   // onNavigationReady 콜백 호출 (네비게이션 모드 함수들 전달)
   useEffect(() => {
     if (onNavigationReady) {
@@ -1348,159 +1356,59 @@ export default function RunningMap({
         </div>
       )}
 
-      {/* 네비게이션 모드 토글 버튼들 (런닝 모드에서만) */}
+      {/* 네비게이션 버튼 (런닝 모드에서만) */}
       {mode === 'running' && (
-        <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+        <div className="absolute top-4 right-4 z-10">
           {/* 전체 화면 네비게이션 버튼 */}
           <button
             onClick={startFullScreenNavigation}
-            className="w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-purple-600 border-purple-600 text-white hover:bg-purple-700"
+            className="w-14 h-14 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-blue-500 border-blue-500 text-white hover:bg-blue-600"
             title="전체 화면 네비게이션"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </button>
+        </div>
+      )}
 
-          {/* 네비게이션 모드 토글 */}
-          <button
-            onClick={isNavigationMode ? stopNavigationMode : startNavigationMode}
-            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-              isNavigationMode 
-                ? 'bg-[#00FF88] border-[#00FF88] text-black' 
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
-            title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </button>
-
-          {/* 앱 내 카카오맵 네비게이션 버튼 */}
-          <button
-            onClick={isInAppNavActive ? stopInAppNavigation : startInAppNavigation}
-            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-              isInAppNavActive 
-                ? 'bg-blue-600 border-blue-600 text-white' 
-                : 'bg-orange-500 border-orange-500 text-white hover:bg-orange-600'
-            }`}
-            title={isInAppNavActive ? '앱 내 네비게이션 중지' : '앱 내 네비게이션 시작'}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isInAppNavActive ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              )}
-            </svg>
-          </button>
-
-          {/* 외부 카카오맵 네비게이션 버튼 (기존) */}
-          <button
-            onClick={() => {
-              if (courseRoute.length > 0 && userLocation) {
-                // 전체 GPX 경로를 카카오맵으로 전송
-                const fullRouteNavUrl = generateKakaoBicycleNavUrl(userLocation, courseRoute, true)
-                
-                if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
-                  // React Native WebView 환경
-                  (window as any).ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'OPEN_KAKAO_NAV',
-                    url: fullRouteNavUrl,
-                    fallbackUrl: generateKakaoWebFallbackUrl(courseRoute)
-                  }))
-                } else {
-                  // 웹 환경에서는 새 창으로 열기
-                  window.open(fullRouteNavUrl, '_blank')
+      {/* GPS 상태 표시 (런닝 모드가 아닐 때만) */}
+      {mode !== 'running' && (
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          {/* GPS 상태 */}
+          <div className="bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                locationPermission === 'granted' 
+                  ? (isRunning ? 'bg-[#00FF88] animate-pulse' : 'bg-green-500')
+                  : 'bg-red-500'
+              }`}></div>
+              <span className="text-xs text-white">
+                {locationPermission === 'granted' 
+                  ? (isRunning ? 'GPS 추적 중' : 'GPS 준비됨')
+                  : '위치 권한 없음'
                 }
-                
-                console.log('🚴‍♂️ 외부 카카오맵 네비게이션 실행:', fullRouteNavUrl)
-              } else {
-                alert('경로 정보가 없거나 현재 위치를 확인할 수 없습니다.')
-              }
-            }}
-            className="w-12 h-12 rounded-full shadow-lg border-2 bg-gray-600 border-gray-600 text-white hover:bg-gray-700 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-            title="외부 카카오맵 네비게이션"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </button>
+              </span>
+            </div>
+          </div>
 
-          {/* 네비게이션 모드 토글 */}
-          <button
-            onClick={() => setIsNavigationMode(!isNavigationMode)}
-            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-              isNavigationMode 
-                ? 'bg-blue-500 border-blue-500 text-white' 
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
-            title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+          {/* 내 위치 버튼 */}
+          {locationPermission === 'granted' && (
+            <button
+              onClick={moveToCurrentLocation}
+              className="bg-black/80 backdrop-blur-sm rounded-xl p-2 border border-gray-800 hover:bg-gray-800/80 transition-colors"
+              title="내 위치로 이동"
+            >
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 
-      {/* GPS 상태 표시 및 내 위치 버튼 */}
-      <div className={`absolute flex items-center gap-2 ${
-        mode === 'running' 
-          ? (isNavigationMode ? 'bottom-4 right-4' : 'top-4 left-4')
-          : 'top-4 right-4'
-      }`}>
-        {/* GPS 상태 */}
-        <div className="bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
-              locationPermission === 'granted' 
-                ? (isRunning ? 'bg-[#00FF88] animate-pulse' : 'bg-green-500')
-                : 'bg-red-500'
-            }`}></div>
-            <span className="text-xs text-white">
-              {locationPermission === 'granted' 
-                ? (isRunning ? 'GPS 추적 중' : 'GPS 준비됨')
-                : '위치 권한 없음'
-              }
-            </span>
-          </div>
-        </div>
-
-        {/* 내 위치 버튼 */}
-        {locationPermission === 'granted' && (
-          <button
-            onClick={moveToCurrentLocation}
-            className="bg-black/80 backdrop-blur-sm rounded-xl p-2 border border-gray-800 hover:bg-gray-800/80 transition-colors"
-            title="내 위치로 이동"
-          >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* 경로 정보 (런닝 중에만 표시) */}
-      {isRunning && (
-        <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
-          <div className="text-xs text-white">
-            <div>경로 포인트: {userPath.length}</div>
-            {userPath.length > 1 && (
-              <div className="text-[#00FF88]">
-                거리: {(userPath.reduce((total, point, index) => {
-                  if (index === 0) return 0
-                  const prev = userPath[index - 1]
-                  return total + haversineDistance(prev, point) / 1000
-                }, 0)).toFixed(2)}km
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* 현재 위치 버튼 (대기/미리보기 모드에서만) */}
       {(mode === 'waiting' || mode === 'preview') && (
