@@ -224,6 +224,9 @@ export default function RunningMap({
     hasCompleted: false
   })
 
+  // 초기 코스 표시 여부 (처음 진입 시에만 전체 코스 보기)
+  const [hasInitiallyShownCourse, setHasInitiallyShownCourse] = useState(false)
+
   // 시작점 도착 상태
   const [isAtStartPoint, setIsAtStartPoint] = useState(false)
   const [distanceToStart, setDistanceToStart] = useState<number | null>(null)
@@ -826,21 +829,9 @@ export default function RunningMap({
       setCurrentMarker(marker)
       DEBUG && console.log('📍 현재 위치 마커 업데이트:', userLocation)
       
-      // waiting 모드에서는 현재 위치도 지도 범위에 포함
-      if (mode === 'waiting' && courseRoute.length > 0) {
-        const bounds = new kakao.maps.LatLngBounds()
-        
-        // 현재 위치 추가
-        bounds.extend(position)
-        
-        // 모든 경로 포인트 추가
-        courseRoute.forEach((point: any) => {
-          bounds.extend(new kakao.maps.LatLng(point.lat, point.lng))
-        })
-        
-        // 지도 범위 조정
-        map.setBounds(bounds, 50)
-        DEBUG && console.log('🗺️ waiting 모드: 현재 위치 + 코스 범위로 지도 조정')
+      // waiting 모드에서는 현재 위치 마커만 표시하고 지도 범위는 조정하지 않음 (코스 중심 유지)
+      if (mode === 'waiting') {
+        DEBUG && console.log('📍 waiting 모드: 현재 위치 마커만 표시, 코스 중심 유지')
       }
     } catch (error) {
       console.error('❌ 현재 위치 마커 업데이트 실패:', error)
@@ -899,8 +890,20 @@ export default function RunningMap({
 
         setStartPointMarker(newStartMarker)
 
-        // waiting 모드가 아닌 경우에만 지도 범위 조정 (waiting 모드는 현재 위치 마커 useEffect에서 처리)
-        if (mode !== 'waiting') {
+        // 모드별 지도 범위 조정
+        if (mode === 'waiting') {
+          // waiting 모드: 처음 진입 시에만 전체 코스가 보이도록 범위 조정
+          if (!hasInitiallyShownCourse) {
+            const bounds = new kakao.maps.LatLngBounds()
+            courseRoute.forEach((point: any) => {
+              bounds.extend(new kakao.maps.LatLng(point.lat, point.lng))
+            })
+            map.setBounds(bounds, 50) // 50px 여백
+            setHasInitiallyShownCourse(true)
+            DEBUG && console.log('🗺️ waiting 모드: 초기 진입 - 전체 코스 범위로 지도 조정')
+          }
+          // 이미 초기 표시를 했다면 지도 범위를 조정하지 않음 (사용자 조작 유지)
+        } else {
           // 다른 모드에서는 시작점 중심으로
           map.setCenter(new kakao.maps.LatLng(startPoint.lat, startPoint.lng))
           map.setLevel(3)
@@ -911,7 +914,7 @@ export default function RunningMap({
     } catch (error) {
       console.error('❌ 코스 경로 표시 실패:', error)
     }
-  }, [map, courseRoute, showStartPoint, logoBase64, coursePolyline, startPointMarker, mode])
+  }, [map, courseRoute, showStartPoint, logoBase64, coursePolyline, startPointMarker, mode, hasInitiallyShownCourse])
 
   // 네비게이션 모드 시작 (자동차 네비게이션 스타일)
   const startNavigationMode = useCallback(() => {
@@ -1177,18 +1180,26 @@ export default function RunningMap({
 
   // 전체 화면 네비게이션 시작
   const startFullScreenNavigation = useCallback(() => {
+    console.log('🎯 startFullScreenNavigation 호출됨:', {
+      mode,
+      courseRouteLength: courseRoute?.length || 0,
+      isFullScreenNavActive
+    })
+    
+    // 런닝 모드가 아니면 경고만 출력하고 계속 진행 (자동 진입을 위해)
     if (mode !== 'running') {
-      alert('런닝 시작 후에 전체 화면 네비게이션을 사용할 수 있습니다.')
-      return
+      console.log('⚠️ 런닝 모드가 아니지만 전체화면 네비게이션 시도:', mode)
+      // alert 제거 - 자동 진입 시에는 경고창이 방해가 됨
     }
     
     if (!courseRoute || courseRoute.length < 2) {
+      console.log('❌ 코스 데이터 부족:', courseRoute?.length || 0)
       alert('코스 데이터가 없습니다.')
       return
     }
 
     setIsFullScreenNavActive(true)
-    console.log('🚗 전체 화면 네비게이션 시작')
+    console.log('✅ 전체 화면 네비게이션 시작 성공')
   }, [mode, courseRoute])
 
   // 전체 화면 네비게이션 종료
@@ -1197,18 +1208,23 @@ export default function RunningMap({
     console.log('🛑 전체 화면 네비게이션 종료')
   }, [])
 
-  // 런닝 모드 시작 시 자동으로 네비게이션 모드 활성화
-  useEffect(() => {
-    if (mode === 'running' && !isNavigationMode) {
-      console.log('🏃‍♂️ 런닝 모드 시작 - 자동으로 네비게이션 모드 활성화')
-      setIsNavigationMode(true)
-    }
-  }, [mode, isNavigationMode])
 
   // onNavigationReady 콜백 호출 (네비게이션 모드 함수들 전달)
   useEffect(() => {
+    console.log('🔄 onNavigationReady useEffect 실행:', {
+      onNavigationReady: !!onNavigationReady,
+      startNavigationMode: !!startNavigationMode,
+      stopNavigationMode: !!stopNavigationMode,
+      isNavigationMode,
+      startFullScreenNavigation: !!startFullScreenNavigation,
+      mode,
+      courseRouteLength: courseRoute?.length || 0
+    })
+    
     if (onNavigationReady) {
+      console.log('📞 onNavigationReady 콜백 호출 중...')
       onNavigationReady(startNavigationMode, stopNavigationMode, isNavigationMode, startFullScreenNavigation)
+      console.log('✅ onNavigationReady 콜백 호출 완료')
     }
   }, [onNavigationReady, startNavigationMode, stopNavigationMode, isNavigationMode, startFullScreenNavigation])
 
@@ -1232,8 +1248,8 @@ export default function RunningMap({
       <div 
         className="w-full rounded-2xl overflow-hidden border border-gray-800"
         style={{
-          height: '67vh',
-          minHeight: '400px'
+          height: '33vh',
+          minHeight: '200px'
         }}
       >
         <LocationPermission
@@ -1253,8 +1269,8 @@ export default function RunningMap({
           position: 'relative',
           isolation: 'isolate',
           zIndex: 0,
-          height: isNavigationMode ? '75vh' : '67vh', // 화면의 3분의 2 이상
-          minHeight: '400px' // 최소 높이 보장
+          height: isNavigationMode ? '75vh' : '33vh', // 일반 모드는 화면의 1/3, 네비게이션 모드는 3/4
+          minHeight: '200px' // 최소 높이 보장
         }}
       />
       
@@ -1356,18 +1372,63 @@ export default function RunningMap({
         </div>
       )}
 
-      {/* 네비게이션 버튼 (런닝 모드에서만) */}
-      {mode === 'running' && (
-        <div className="absolute top-4 right-4 z-10">
+      {/* waiting 모드 컨트롤 버튼들 */}
+      {mode === 'waiting' && (
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+          {/* 내 위치 버튼 */}
+          <button
+            onClick={moveToCurrentLocation}
+            className="px-3 py-2 rounded-lg shadow-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+          >
+            내위치
+          </button>
+
+          {/* 시작점으로 이동 버튼 */}
+          <button
+            onClick={() => {
+              if (courseRoute && courseRoute.length > 0) {
+                const startPoint = courseRoute[0]
+                const kakao = (window as any).kakao
+                map.setCenter(new kakao.maps.LatLng(startPoint.lat, startPoint.lng))
+                map.setLevel(3)
+              }
+            }}
+            className="px-3 py-2 rounded-lg shadow-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
+          >
+            시작점
+          </button>
+        </div>
+      )}
+
+      {/* 네비게이션 컨트롤 버튼들 (런닝 모드에서만) */}
+      {mode === 'running' && !hideFloatingNavigation && (
+        <div className={`absolute flex flex-col gap-2 ${
+          isNavigationMode ? 'top-4 right-4' : 'bottom-20 right-4'
+        } z-20`}>
+          {/* 1인칭 네비게이션 모드 토글 */}
+          <button
+            onClick={() => setIsNavigationMode(!isNavigationMode)}
+            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
+              isNavigationMode 
+                ? 'bg-blue-500 border-blue-500 text-white' 
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+
           {/* 전체 화면 네비게이션 버튼 */}
           <button
             onClick={startFullScreenNavigation}
-            className="w-14 h-14 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-blue-500 border-blue-500 text-white hover:bg-blue-600"
+            className="w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-purple-600 border-purple-600 text-white hover:bg-purple-700"
             title="전체 화면 네비게이션"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
           </button>
         </div>

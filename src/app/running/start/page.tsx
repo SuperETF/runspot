@@ -7,12 +7,7 @@ import NavigationGuide from '@/components/common/NavigationGuide'
 import { useRunningSession } from '@/hooks/useRunningSession'
 import { useRunningStore } from '@/stores/runningStore'
 import { 
-  generateKakaoBicycleNavUrl, 
-  generateKakaoWebFallbackUrl, 
-  getRouteInfo,
-  convertGPXToKML,
-  generateGPXFileShareUrl,
-  generateGoogleMapsGPXUrl
+  getRouteInfo
 } from '@/services/routeOptimization'
 import { getCourse } from '@/lib/courses'
 import RunningHeader from './components/RunningHeader'
@@ -107,13 +102,35 @@ function RunningStartContent() {
 
   // 네비게이션 준비 콜백
   const handleNavigationReady = (startNav: () => void, stopNav: () => void, isNavMode: boolean, startFullScreenNav: () => void) => {
+    console.log('🔧 네비게이션 함수 준비 시작:', {
+      startNav: !!startNav,
+      stopNav: !!stopNav, 
+      isNavMode,
+      startFullScreenNav: !!startFullScreenNav,
+      timestamp: new Date().toLocaleTimeString()
+    })
+    
     setNavigationFunctions({
       startNav,
       stopNav,
       isNavMode,
       startFullScreenNav
     })
-    console.log('🎯 네비게이션 함수 준비 완료:', { startNav: !!startNav, stopNav: !!stopNav, isNavMode, startFullScreenNav: !!startFullScreenNav })
+    
+    console.log('✅ 네비게이션 함수 준비 완료 - 자동 진입 가능 상태')
+    
+    // 런닝 중이고 아직 전체화면 네비게이션이 활성화되지 않았다면 즉시 시도
+    if (isRunning && startFullScreenNav) {
+      console.log('🚀 런닝 중 네비게이션 함수 준비됨 - 즉시 전체화면 모드 진입 시도')
+      setTimeout(() => {
+        try {
+          startFullScreenNav()
+          console.log('✅ 지연된 자동 네비게이션 진입 성공')
+        } catch (error) {
+          console.error('❌ 지연된 자동 네비게이션 진입 실패:', error)
+        }
+      }, 100) // 즉시 실행
+    }
   }
 
   // 네비게이션 업데이트 콜백
@@ -145,6 +162,7 @@ function RunningStartContent() {
       return
     }
 
+    console.log('🏃‍♂️ 런닝 시작 버튼 클릭됨')
     startRunning(course)
     
     // 런닝 시작 시 경로 정보 로깅만 수행 (자동 카카오맵 이동 제거)
@@ -156,18 +174,44 @@ function RunningStartContent() {
         포인트수: routeInfo.waypointCount
       })
       
-      console.log('🏃‍♂️ 런닝 모드로 전환됩니다. 네비게이션은 별도 버튼으로 이용하세요.')
+      console.log('🏃‍♂️ 런닝 모드로 전환됩니다. 자동 네비게이션 모드 진입을 시도합니다.')
     }
     
-    // 런닝 시작 시 자동으로 전체 화면 네비게이션 모드 진입
-    setTimeout(() => {
+    // 런닝 시작 시 자동으로 전체 화면 네비게이션 모드 진입 (개선된 로직)
+    const tryAutoNavigation = (attempt = 1, maxAttempts = 5) => {
+      console.log(`🎯 자동 네비게이션 진입 시도 ${attempt}/${maxAttempts}`)
+      console.log('🔍 navigationFunctions 상태:', {
+        exists: !!navigationFunctions,
+        startFullScreenNav: !!navigationFunctions?.startFullScreenNav,
+        isNavMode: navigationFunctions?.isNavMode,
+        functions: navigationFunctions ? Object.keys(navigationFunctions) : 'null'
+      })
+      
       if (navigationFunctions?.startFullScreenNav) {
-        navigationFunctions.startFullScreenNav()
-        console.log('🚗 런닝 시작 - 전체 화면 네비게이션 자동 진입')
+        try {
+          navigationFunctions.startFullScreenNav()
+          console.log('✅ 런닝 시작 - 전체 화면 네비게이션 자동 진입 성공')
+          return true
+        } catch (error) {
+          console.error('❌ 네비게이션 시작 중 오류:', error)
+          return false
+        }
       } else {
-        console.log('⚠️ navigationFunctions.startFullScreenNav가 없습니다:', navigationFunctions)
+        console.log(`⚠️ 시도 ${attempt}: navigationFunctions.startFullScreenNav가 아직 준비되지 않음`)
+        
+        if (attempt < maxAttempts) {
+          // 재시도 (지수 백오프: 1초, 2초, 3초, 4초, 5초)
+          setTimeout(() => tryAutoNavigation(attempt + 1, maxAttempts), attempt * 1000)
+        } else {
+          console.log('❌ 최대 재시도 횟수 초과: 자동 네비게이션 진입 실패')
+          console.log('💡 사용자가 수동으로 전체화면 버튼을 눌러야 합니다.')
+        }
+        return false
       }
-    }, 1000) // 1초 후 자동 진입 (네비게이션 함수 준비 시간 확보)
+    }
+    
+    // 첫 번째 시도는 즉시 실행
+    setTimeout(() => tryAutoNavigation(), 500) // 0.5초 후 첫 시도
   }
 
   // 뒤로가기 핸들러
@@ -257,26 +301,6 @@ function RunningStartContent() {
     }
   }
 
-  // GPX 파일 다운로드
-  const handleDownloadGPX = () => {
-    if (!course || !courseId) return
-    
-    const gpxFileUrl = generateGPXFileShareUrl(courseId)
-    const link = document.createElement('a')
-    link.href = gpxFileUrl
-    link.download = `${course.name}_경로.gpx`
-    link.click()
-    
-    alert('GPX 파일이 다운로드되었습니다.\n\n카카오맵 앱에서:\n1. 메뉴 → 나의 정보\n2. 저장된 장소\n3. 파일 가져오기\n4. 다운로드된 GPX 파일 선택')
-  }
-  
-  // 구글맵으로 열기
-  const handleOpenGoogleMaps = () => {
-    if (!course?.gps_route) return
-    
-    const googleMapsUrl = generateGoogleMapsGPXUrl(course.gps_route)
-    window.open(googleMapsUrl, '_blank')
-  }
 
   if (!course) {
     return (
@@ -324,9 +348,7 @@ function RunningStartContent() {
               currentCheckpoint={currentCheckpoint}
               passedCheckpoints={passedCheckpoints}
               isCompleted={isCompleted}
-              onNavigationReady={(startNav, stopNav, isNavMode, startFullScreenNav) => {
-                setNavigationFunctions({ startNav, stopNav, isNavMode, startFullScreenNav })
-              }}
+              onNavigationReady={handleNavigationReady}
               onProgressUpdate={(progress) => {
                 if (progress) {
                   setCourseProgress({
@@ -366,8 +388,6 @@ function RunningStartContent() {
             distanceToStart={distanceToStart}
             onStartRunning={handleStartRunning}
             onNavigateToStart={handleNavigateToStart}
-            onDownloadGPX={handleDownloadGPX}
-            onOpenGoogleMaps={handleOpenGoogleMaps}
           />
         )}
 
