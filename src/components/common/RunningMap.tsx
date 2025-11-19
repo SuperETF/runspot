@@ -79,7 +79,7 @@ interface RunningMapProps {
   currentCheckpoint?: number
   passedCheckpoints?: number[]
   isCompleted?: boolean
-  onNavigationReady?: (startNav: () => void, stopNav: () => void, isNavMode: boolean) => void
+  onNavigationReady?: (startNav: () => void, stopNav: () => void, isNavMode: boolean, startFullScreenNav: () => void) => void
   // 화면 모드 구분
   mode?: 'preview' | 'waiting' | 'running'
   // 런닝 통계 데이터
@@ -1200,9 +1200,9 @@ export default function RunningMap({
   // onNavigationReady 콜백 호출 (네비게이션 모드 함수들 전달)
   useEffect(() => {
     if (onNavigationReady) {
-      onNavigationReady(startNavigationMode, stopNavigationMode, isNavigationMode)
+      onNavigationReady(startNavigationMode, stopNavigationMode, isNavigationMode, startFullScreenNavigation)
     }
-  }, [onNavigationReady, startNavigationMode, stopNavigationMode, isNavigationMode])
+  }, [onNavigationReady, startNavigationMode, stopNavigationMode, isNavigationMode, startFullScreenNavigation])
 
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {

@@ -52,6 +52,7 @@ function RunningStartContent() {
     startNav: () => void
     stopNav: () => void
     isNavMode: boolean
+    startFullScreenNav: () => void
   } | null>(null)
   
   // 실시간 네비게이션 데이터
@@ -139,13 +140,14 @@ function RunningStartContent() {
   }, [])
 
   // 네비게이션 준비 콜백
-  const handleNavigationReady = (startNav: () => void, stopNav: () => void, isNavMode: boolean) => {
+  const handleNavigationReady = (startNav: () => void, stopNav: () => void, isNavMode: boolean, startFullScreenNav: () => void) => {
     setNavigationFunctions({
       startNav,
       stopNav,
-      isNavMode
+      isNavMode,
+      startFullScreenNav
     })
-    console.log('🎯 네비게이션 함수 준비 완료:', { startNav: !!startNav, stopNav: !!stopNav, isNavMode })
+    console.log('🎯 네비게이션 함수 준비 완료:', { startNav: !!startNav, stopNav: !!stopNav, isNavMode, startFullScreenNav: !!startFullScreenNav })
   }
 
   // 네비게이션 업데이트 콜백
@@ -204,13 +206,13 @@ function RunningStartContent() {
       console.log('🏃‍♂️ 런닝 모드로 전환됩니다. 네비게이션은 별도 버튼으로 이용하세요.')
     }
     
-    // RunSpot 내부 1인칭 네비게이션 모드도 활성화 (백업용)
+    // 런닝 시작 시 자동으로 전체 화면 네비게이션 모드 진입
     setTimeout(() => {
-      if (navigationFunctions?.startNav) {
-        navigationFunctions.startNav()
-        console.log('🎯 RunSpot 1인칭 네비게이션 모드 활성화')
+      if (navigationFunctions?.startFullScreenNav) {
+        navigationFunctions.startFullScreenNav()
+        console.log('🚗 런닝 시작 - 전체 화면 네비게이션 자동 진입')
       }
-    }, 1000)
+    }, 500) // 0.5초 후 자동 진입
   }
 
   // 뒤로가기 핸들러
@@ -458,8 +460,8 @@ function RunningStartContent() {
               currentCheckpoint={currentCheckpoint}
               passedCheckpoints={passedCheckpoints}
               isCompleted={isCompleted}
-              onNavigationReady={(startNav, stopNav, isNavMode) => {
-                setNavigationFunctions({ startNav, stopNav, isNavMode })
+              onNavigationReady={(startNav, stopNav, isNavMode, startFullScreenNav) => {
+                setNavigationFunctions({ startNav, stopNav, isNavMode, startFullScreenNav })
               }}
               onProgressUpdate={(progress) => {
                 if (progress) {
