@@ -254,3 +254,89 @@ export const isInSeoul = (coord: GPSCoordinate): boolean => {
     coord.lng <= seoulBounds.east
   )
 }
+
+// 보행자 네비게이션 MVP: 경로 포인트에 distanceFromStart 추가
+export interface RoutePointWithDistance extends GPSCoordinate {
+  distanceFromStart: number // meters
+}
+
+// GPX 경로를 distanceFromStart가 포함된 RoutePoint로 변환
+export const prepareRoutePoints = (gpsRoute: GPSCoordinate[]): RoutePointWithDistance[] => {
+  if (gpsRoute.length === 0) return []
+  
+  const routePoints: RoutePointWithDistance[] = []
+  let cumulativeDistance = 0
+  
+  for (let i = 0; i < gpsRoute.length; i++) {
+    if (i > 0) {
+      // 이전 포인트와의 거리를 미터 단위로 계산
+      const segmentDistance = calculateDistance(gpsRoute[i - 1], gpsRoute[i]) * 1000
+      cumulativeDistance += segmentDistance
+    }
+    
+    routePoints.push({
+      lat: gpsRoute[i].lat,
+      lng: gpsRoute[i].lng,
+      timestamp: gpsRoute[i].timestamp,
+      distanceFromStart: cumulativeDistance
+    })
+  }
+  
+  return routePoints
+}
+
+// 보행자 네비게이션 MVP: 진행률 계산
+export interface NavigationProgress {
+  nearestIndex: number
+  passedDistance: number // meters
+  totalDistance: number // meters
+  progressPercent: number // 0-100
+  isOffCourse: boolean
+  distanceToRoute: number // meters
+}
+
+// 코스 이탈 임계값 (미터)
+export const OFF_COURSE_THRESHOLD = 40
+
+// 현재 위치 기준 네비게이션 진행률 계산
+export const calculateNavigationProgress = (
+  routePoints: RoutePointWithDistance[],
+  currentPosition: GPSCoordinate
+): NavigationProgress => {
+  if (routePoints.length === 0) {
+    return {
+      nearestIndex: -1,
+      passedDistance: 0,
+      totalDistance: 0,
+      progressPercent: 0,
+      isOffCourse: true,
+      distanceToRoute: Infinity
+    }
+  }
+  
+  // 가장 가까운 포인트 찾기
+  let nearestIndex = 0
+  let minDistance = Number.POSITIVE_INFINITY
+  
+  routePoints.forEach((point, index) => {
+    const distance = calculateDistance(point, currentPosition) * 1000 // 미터 변환
+    if (distance < minDistance) {
+      minDistance = distance
+      nearestIndex = index
+    }
+  })
+  
+  const totalDistance = routePoints[routePoints.length - 1].distanceFromStart
+  const passedDistance = routePoints[nearestIndex].distanceFromStart
+  const progressPercent = totalDistance > 0 ? (passedDistance / totalDistance) * 100 : 0
+  const isOffCourse = minDistance > OFF_COURSE_THRESHOLD
+  
+  return {
+    nearestIndex,
+    passedDistance,
+    totalDistance,
+    progressPercent,
+    isOffCourse,
+    distanceToRoute: minDistance
+  }
+}

@@ -6,6 +6,13 @@ import LocationPermission from './LocationPermission'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Navigation, Volume2, VolumeX } from 'lucide-react'
 import { useRunningStore } from '@/stores/runningStore'
+// 보행자 네비게이션 MVP 추가
+import { 
+  prepareRoutePoints, 
+  calculateNavigationProgress, 
+  type RoutePointWithDistance, 
+  type NavigationProgress as PedestrianProgress 
+} from '@/utils/mapUtils'
 // 카카오 길찾기 기반 네비게이션 및 음성 안내
 import { 
   createRunningNavigation,
@@ -85,6 +92,8 @@ interface RunningMapProps {
   onNavigationUpdate?: (navigationState: NavigationState | null) => void
   // 음성 안내 활성화 상태
   voiceGuidanceEnabled?: boolean
+  // 보행자 네비게이션 MVP: 진행률 콜백
+  onProgressUpdate?: (progress: PedestrianProgress | null) => void
 }
 
 export default function RunningMap({ 
@@ -105,6 +114,7 @@ export default function RunningMap({
   hideFloatingNavigation = false,
   onNavigationUpdate,
   voiceGuidanceEnabled = false,
+  onProgressUpdate,
   mode = 'preview' // 기본값은 미리보기 모드
 }: RunningMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -122,6 +132,7 @@ export default function RunningMap({
   const courseData = useRunningStore((state) => state.courseData)
   const userPath = useRunningStore((state) => state.userPath)
   const updatePosition = useRunningStore((state) => state.updatePosition)
+  const currentPosition = useRunningStore((state) => state.currentPosition)
   
   // courseRoute를 useMemo로 메모이제이션하여 불필요한 리렌더링 방지
   const courseRoute = useMemo(() => {
@@ -135,6 +146,23 @@ export default function RunningMap({
     })
     return route
   }, [courseData?.gps_route, mode])
+
+  // 보행자 네비게이션 MVP: 경로 포인트 전처리
+  useEffect(() => {
+    if (courseRoute.length > 0) {
+      const processedRoutePoints = prepareRoutePoints(courseRoute)
+      setRoutePoints(processedRoutePoints)
+      
+      DEBUG && console.log('🚶‍♂️ 보행자 네비게이션 경로 포인트 준비:', {
+        원본포인트수: courseRoute.length,
+        처리된포인트수: processedRoutePoints.length,
+        총거리: processedRoutePoints.length > 0 ? `${(processedRoutePoints[processedRoutePoints.length - 1].distanceFromStart / 1000).toFixed(2)}km` : '0km'
+      })
+    } else {
+      setRoutePoints([])
+      setPedestrianProgress(null)
+    }
+  }, [courseRoute])
 
   // 길찾기 경로 상태
   const [routePath, setRoutePath] = useState<any[]>([])
@@ -160,6 +188,9 @@ export default function RunningMap({
   const [isFirstPersonMode, setIsFirstPersonMode] = useState(false)
   // 코스 기반 1인칭 네비게이션 상태 (진행률, 이탈 여부)
   const [navigationProgress, setNavigationProgress] = useState<NavigationProgress | null>(null)
+  // 보행자 네비게이션 MVP 상태
+  const [pedestrianProgress, setPedestrianProgress] = useState<PedestrianProgress | null>(null)
+  const [routePoints, setRoutePoints] = useState<RoutePointWithDistance[]>([])
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState>({
     isActive: false,
     trackingWatchId: null,
@@ -183,6 +214,30 @@ export default function RunningMap({
   const [isAtStartPoint, setIsAtStartPoint] = useState(false)
   const [distanceToStart, setDistanceToStart] = useState<number | null>(null)
   const START_POINT_THRESHOLD = 0.05 // 50m 이내면 시작점 도착으로 간주
+
+  // 보행자 네비게이션 MVP: RunningStore의 currentPosition 변경 시 진행률 계산
+  useEffect(() => {
+    if (mode === 'running' && currentPosition && routePoints.length > 0) {
+      const progress = calculateNavigationProgress(routePoints, currentPosition)
+      setPedestrianProgress(progress)
+      
+      // 부모 컴포넌트에 진행률 전달
+      if (onProgressUpdate) {
+        onProgressUpdate(progress)
+      }
+      
+      DEBUG && console.log('🚶‍♂️ RunningStore 위치 업데이트 - 보행자 네비게이션 진행률:', {
+        진행률: `${progress.progressPercent.toFixed(1)}%`,
+        통과거리: `${(progress.passedDistance / 1000).toFixed(2)}km`,
+        총거리: `${(progress.totalDistance / 1000).toFixed(2)}km`,
+        코스이탈: progress.isOffCourse ? '예' : '아니오',
+        이탈거리: `${progress.distanceToRoute.toFixed(1)}m`
+      })
+    } else if (onProgressUpdate) {
+      // 런닝 모드가 아니거나 데이터가 없으면 null 전달
+      onProgressUpdate(null)
+    }
+  }, [mode, currentPosition, routePoints, onProgressUpdate])
 
   // 시작점 도착 상태 확인 및 업데이트
   useEffect(() => {
@@ -883,6 +938,20 @@ export default function RunningMap({
         if (onLocationUpdate) {
           onLocationUpdate(newPosition)
         }
+
+        // 보행자 네비게이션 MVP: 진행률 계산 (런닝 모드에서만)
+        if (mode === 'running' && routePoints.length > 0) {
+          const progress = calculateNavigationProgress(routePoints, newPosition)
+          setPedestrianProgress(progress)
+          
+          DEBUG && console.log('🚶‍♂️ 보행자 네비게이션 진행률:', {
+            진행률: `${progress.progressPercent.toFixed(1)}%`,
+            통과거리: `${(progress.passedDistance / 1000).toFixed(2)}km`,
+            총거리: `${(progress.totalDistance / 1000).toFixed(2)}km`,
+            코스이탈: progress.isOffCourse ? '예' : '아니오',
+            이탈거리: `${progress.distanceToRoute.toFixed(1)}m`
+          })
+        }
       },
       (error) => {
         DEBUG && console.error('❌ 위치 추적 오류:', error.message)
@@ -1063,8 +1132,8 @@ export default function RunningMap({
         }}
       />
       
-      {/* off-route 경고 배너 (1인칭 모드에서만 표시) */}
-      {isFirstPersonMode && navigationProgress?.isOffRoute && (
+      {/* 보행자 네비게이션 MVP: 코스 이탈 경고 배너 (런닝 모드에서 표시) */}
+      {mode === 'running' && pedestrianProgress?.isOffCourse && (
         <motion.div 
           className="absolute top-2 left-4 right-4 z-10"
           initial={{ opacity: 0, y: -20 }}
@@ -1077,22 +1146,22 @@ export default function RunningMap({
                 <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
               </svg>
               <span className="font-medium">코스에서 벗어났습니다</span>
-              <span className="text-xs text-red-200">({navigationProgress.distanceToSegment.toFixed(0)}m 이탈)</span>
+              <span className="text-xs text-red-200">({pedestrianProgress.distanceToRoute.toFixed(0)}m 이탈)</span>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* 1인칭 모드 진행률 표시 */}
-      {isFirstPersonMode && navigationProgress && (
+      {/* 보행자 네비게이션 MVP: 진행률 표시 (런닝 모드에서 표시) */}
+      {mode === 'running' && pedestrianProgress && (
         <div className="absolute top-4 left-4 right-4 z-10">
           <div className="bg-black/90 backdrop-blur-sm rounded-lg px-4 py-3 border border-gray-700">
             <div className="flex items-center justify-between mb-2">
               <div className="text-white text-sm font-medium">
-                진행률: {(navigationProgress.progressRatio * 100).toFixed(1)}%
+                진행률: {pedestrianProgress.progressPercent.toFixed(1)}%
               </div>
               <div className="text-[#00FF88] text-sm">
-                {(navigationProgress.remainingDistance / 1000).toFixed(2)}km 남음
+                {((pedestrianProgress.totalDistance - pedestrianProgress.passedDistance) / 1000).toFixed(2)}km 남음
               </div>
             </div>
             
@@ -1100,19 +1169,31 @@ export default function RunningMap({
             <div className="w-full bg-gray-700 rounded-full h-2">
               <div 
                 className="bg-[#00FF88] h-2 rounded-full transition-all duration-300"
-                style={{ width: `${navigationProgress.progressRatio * 100}%` }}
+                style={{ width: `${pedestrianProgress.progressPercent}%` }}
               />
             </div>
             
-            {/* 속도 및 방향 정보 */}
+            {/* 거리 정보 */}
             <div className="flex items-center justify-between mt-2 text-xs text-gray-300">
               <div>
-                속도: {(firstPersonState.currentSpeed * 3.6).toFixed(1)} km/h
+                통과: {(pedestrianProgress.passedDistance / 1000).toFixed(2)}km
               </div>
               <div>
-                방향: {firstPersonState.smoothBearing.toFixed(0)}°
+                총거리: {(pedestrianProgress.totalDistance / 1000).toFixed(2)}km
               </div>
             </div>
+            
+            {/* 1인칭 모드에서는 추가 정보 표시 */}
+            {isFirstPersonMode && (
+              <div className="flex items-center justify-between mt-1 text-xs text-gray-400">
+                <div>
+                  속도: {(firstPersonState.currentSpeed * 3.6).toFixed(1)} km/h
+                </div>
+                <div>
+                  방향: {firstPersonState.smoothBearing.toFixed(0)}°
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

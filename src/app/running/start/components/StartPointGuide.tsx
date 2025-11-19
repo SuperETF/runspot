@@ -1,19 +1,23 @@
 'use client'
 
-import { CheckCircle, Navigation, Play } from 'lucide-react'
+import { CheckCircle, Navigation, Play, Download, ExternalLink } from 'lucide-react'
 
 interface StartPointGuideProps {
   isAtStartPoint: boolean
   distanceToStart: number | null
   onStartRunning: () => void
   onNavigateToStart?: () => void
+  onDownloadGPX?: () => void
+  onOpenGoogleMaps?: () => void
 }
 
 export default function StartPointGuide({ 
   isAtStartPoint, 
   distanceToStart, 
   onStartRunning,
-  onNavigateToStart
+  onNavigateToStart,
+  onDownloadGPX,
+  onOpenGoogleMaps
 }: StartPointGuideProps) {
   return (
     <div className="mb-6">
@@ -60,15 +64,44 @@ export default function StartPointGuide({
                 }
               </p>
               
-              {onNavigateToStart && (
-                <button
-                  onClick={onNavigateToStart}
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl transition-colors flex items-center gap-2 mx-auto"
-                >
-                  <Navigation className="w-5 h-5" />
-                  시작점까지 가기
-                </button>
-              )}
+              <div className="space-y-3">
+                {onNavigateToStart && (
+                  <button
+                    onClick={onNavigateToStart}
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl transition-colors flex items-center gap-2 mx-auto"
+                  >
+                    <Navigation className="w-5 h-5" />
+                    시작점까지 가기
+                  </button>
+                )}
+                
+                {/* 추가 네비게이션 옵션들 */}
+                <div className="flex gap-2 justify-center">
+                  {onDownloadGPX && (
+                    <button
+                      onClick={onDownloadGPX}
+                      className="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      GPX 다운로드
+                    </button>
+                  )}
+                  
+                  {onOpenGoogleMaps && (
+                    <button
+                      onClick={onOpenGoogleMaps}
+                      className="bg-green-500 hover:bg-green-600 text-white font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      구글맵
+                    </button>
+                  )}
+                </div>
+                
+                <p className="text-xs text-gray-400 mt-2">
+                  💡 카카오맵에서 경유지가 안 보이면 GPX 파일을 다운로드해서 직접 불러오세요
+                </p>
+              </div>
             </div>
           )}
         </div>

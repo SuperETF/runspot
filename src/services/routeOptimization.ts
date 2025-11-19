@@ -210,6 +210,84 @@ export function generateKakaoWebFallbackUrl(gpsRoute: GPSPoint[]): string {
   return `https://map.kakao.com/link/to/런닝 도착점,${endPoint.lat},${endPoint.lng}`
 }
 
+// GPX 파일을 KML 형식으로 변환
+export function convertGPXToKML(gpsRoute: GPSPoint[], courseName: string = '런닝 코스'): string {
+  const coordinates = gpsRoute.map(point => `${point.lng},${point.lat},0`).join(' ')
+  
+  const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${courseName}</name>
+    <description>RunSpot 런닝 코스</description>
+    <Style id="lineStyle">
+      <LineStyle>
+        <color>ff0088ff</color>
+        <width>4</width>
+      </LineStyle>
+    </Style>
+    <Placemark>
+      <name>${courseName} 경로</name>
+      <styleUrl>#lineStyle</styleUrl>
+      <LineString>
+        <coordinates>${coordinates}</coordinates>
+      </LineString>
+    </Placemark>
+    <Placemark>
+      <name>시작점</name>
+      <Point>
+        <coordinates>${gpsRoute[0].lng},${gpsRoute[0].lat},0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>도착점</name>
+      <Point>
+        <coordinates>${gpsRoute[gpsRoute.length - 1].lng},${gpsRoute[gpsRoute.length - 1].lat},0</coordinates>
+      </Point>
+    </Placemark>
+  </Document>
+</kml>`
+  
+  return kml
+}
+
+// GPX 파일 직접 공유 URL 생성 (카카오맵 앱에서 import 가능)
+export function generateGPXFileShareUrl(courseId: string): string {
+  // 서버의 GPX 파일 직접 URL
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  
+  // 코스 ID에 따른 GPX 파일 매핑
+  const gpxFileMapping: { [key: string]: string } = {
+    '1': 'bucheon.gpx',
+    '2': 'bucheon.gpx', // 임시로 같은 파일 사용
+    '3': 'bucheon.gpx', // 임시로 같은 파일 사용
+  }
+  
+  const gpxFileName = gpxFileMapping[courseId] || 'bucheon.gpx'
+  return `${baseUrl}/gpx/${gpxFileName}`
+}
+
+// 구글맵으로 GPX/KML 열기 (카카오맵 대안)
+export function generateGoogleMapsGPXUrl(gpsRoute: GPSPoint[]): string {
+  const startPoint = gpsRoute[0]
+  const endPoint = gpsRoute[gpsRoute.length - 1]
+  
+  // 구글맵 길찾기 URL (경유지 포함)
+  const waypoints = gpsRoute.slice(1, -1)
+    .filter((_, index) => index % 10 === 0) // 10개마다 하나씩만 경유지로 사용
+    .map(point => `${point.lat},${point.lng}`)
+    .join('|')
+  
+  let googleMapsUrl = `https://www.google.com/maps/dir/${startPoint.lat},${startPoint.lng}/${endPoint.lat},${endPoint.lng}`
+  
+  if (waypoints) {
+    googleMapsUrl += `/${waypoints}`
+  }
+  
+  googleMapsUrl += '/@?api=1&travelmode=bicycling'
+  
+  return googleMapsUrl
+}
+
 // 웹 카카오맵 경로 검색 URL 생성 (경유지 포함 시도)
 export function generateKakaoWebRouteUrl(
   currentLocation: GPSPoint,
