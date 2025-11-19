@@ -177,6 +177,8 @@ export function generateKakaoBicycleNavUrl(
   
   console.log('🚴‍♂️ 카카오맵 URL 길이:', navUrl.length)
   console.log('📍 경유지 개수:', waypoints.length - 2) // 시작점, 끝점 제외
+  console.log('🗺️ 생성된 카카오맵 URL:', navUrl)
+  console.log('📍 경유지 좌표들:', viaPoints)
   
   // URL이 너무 길면 경유지 수를 줄여서 재시도
   if (navUrl.length > 8000) { // URL 길이 제한 (일반적으로 8KB 이하 권장)
@@ -200,10 +202,28 @@ export function generateKakaoBicycleNavUrl(
   return navUrl
 }
 
-// 웹 fallback URL 생성
+// 웹 카카오맵 경유지 포함 URL 생성
 export function generateKakaoWebFallbackUrl(gpsRoute: GPSPoint[]): string {
   const endPoint = gpsRoute[gpsRoute.length - 1]
+  
+  // 웹에서는 경유지를 지원하지 않으므로 기본 도착지만 설정
   return `https://map.kakao.com/link/to/런닝 도착점,${endPoint.lat},${endPoint.lng}`
+}
+
+// 웹 카카오맵 경로 검색 URL 생성 (경유지 포함 시도)
+export function generateKakaoWebRouteUrl(
+  currentLocation: GPSPoint,
+  gpsRoute: GPSPoint[]
+): string {
+  const waypoints = extractWaypoints(gpsRoute, 5) // 웹에서는 5개 정도로 제한
+  const startPoint = currentLocation
+  const endPoint = waypoints[waypoints.length - 1]
+  
+  // 카카오맵 웹에서 길찾기 URL (경유지는 직접 지원하지 않음)
+  const webUrl = `https://map.kakao.com/link/from/${startPoint.lat},${startPoint.lng}/to/${endPoint.lat},${endPoint.lng}`
+  
+  console.log('🌐 웹 카카오맵 URL:', webUrl)
+  return webUrl
 }
 
 // 경로 정보 요약

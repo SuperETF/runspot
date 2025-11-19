@@ -177,7 +177,7 @@ function RunningStartContent() {
       console.error('백그라운드 GPS 추적 시작 실패:', error)
     }
 
-    // 카카오맵 자전거 네비게이션 자동 실행
+    // 전체 GPX 경로를 카카오맵 자전거 네비게이션으로 실행
     if (course.gps_route && course.gps_route.length > 0 && userLocation) {
       // 경로 정보 출력
       const routeInfo = getRouteInfo(course.gps_route)
@@ -187,23 +187,23 @@ function RunningStartContent() {
         포인트수: routeInfo.waypointCount
       })
       
-      // 모든 GPX 포인트를 사용한 자전거 네비게이션 URL 생성
-      const bicycleNavUrl = generateKakaoBicycleNavUrl(userLocation, course.gps_route, true)
+      // 전체 GPX 경로를 포함한 카카오맵 네비게이션 URL 생성
+      const fullRouteNavUrl = generateKakaoBicycleNavUrl(userLocation, course.gps_route, true)
       const fallbackUrl = generateKakaoWebFallbackUrl(course.gps_route)
       
-      console.log('🚴‍♂️ 카카오맵 자전거 네비게이션 실행:', bicycleNavUrl)
+      console.log('🚴‍♂️ 전체 경로 카카오맵 네비게이션 실행:', fullRouteNavUrl)
       
       // 모바일 앱에서는 카카오맵 앱 직접 호출
       if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
         // React Native WebView 환경
         (window as any).ReactNativeWebView.postMessage(JSON.stringify({
           type: 'OPEN_KAKAO_NAV',
-          url: bicycleNavUrl,
+          url: fullRouteNavUrl,
           fallbackUrl: fallbackUrl
         }))
       } else {
         // 웹 환경에서는 새 창으로 열기
-        window.open(bicycleNavUrl, '_blank')
+        window.open(fullRouteNavUrl, '_blank')
       }
       
       // 카카오맵 네비게이션 활성화 상태 설정
@@ -232,6 +232,7 @@ function RunningStartContent() {
   const handleToggleVoice = () => {
     setVoiceEnabled(!voiceEnabled)
   }
+
 
   // 스크린샷 인증 완료 처리
   const handleScreenshotVerificationComplete = (result: any) => {
@@ -462,14 +463,14 @@ function RunningStartContent() {
           )}
         </div>
 
-        {/* 카카오맵 네비게이션 활성 상태 */}
+        {/* 카카오맵 네비게이션 상태 */}
         {kakaoNavActive && isRunning && (
           <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <div>
-                <p className="text-sm font-medium text-green-800">🚴‍♂️ 카카오맵 자전거 네비게이션 실행 중</p>
-                <p className="text-xs text-green-600">카카오맵에서 경로를 따라 런닝하세요. 완주 후 돌아오면 자동 인증됩니다.</p>
+                <p className="text-sm font-medium text-green-800">🚴‍♂️ 카카오맵 네비게이션 진행 중</p>
+                <p className="text-xs text-green-600">전체 GPX 경로로 네비게이션이 실행되었습니다</p>
               </div>
             </div>
           </div>
@@ -485,7 +486,7 @@ function RunningStartContent() {
                 <p className="text-xs text-blue-600">카카오맵에서 런닝 후 돌아오면 자동으로 기록됩니다</p>
               </div>
               <button
-                onClick={() => {
+onClick={() => {
                   const session = handleStopBackgroundTracking()
                   if (session) {
                     attemptAutoVerification(session)
@@ -625,9 +626,6 @@ function RunningStartContent() {
           isRunning={isRunning}
           isPaused={isPaused}
           isCompleted={isCompleted}
-          isAtStartPoint={isAtStartPoint}
-          distanceToStart={distanceToStart}
-          onStart={handleStartRunning}
           onPause={pauseRunning}
           onResume={resumeRunning}
           onStop={stopRunning}
