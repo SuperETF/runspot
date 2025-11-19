@@ -18,12 +18,6 @@ import {
   generateKakaoBicycleNavUrl, 
   generateKakaoWebFallbackUrl 
 } from '@/services/routeOptimization'
-// 앱 내 카카오맵 네비게이션
-import { 
-  kakaoNavService, 
-  type KakaoNavigationRoute, 
-  type TurnInstruction 
-} from '@/services/kakaoNavigation'
 // 카카오 길찾기 기반 네비게이션 및 음성 안내
 import { 
   createRunningNavigation,
@@ -31,6 +25,9 @@ import {
   speakNavigation,
   type NavigationState      // 카카오 네비게이션 상태 (음성 안내용)
 } from '@/utils/kakaoNavigation'
+import { kakaoNavService } from '../../services/kakaoNavigation'
+import type { KakaoNavigationRoute, TurnInstruction } from '../../services/kakaoNavigation'
+import FullScreenNavigation from '../navigation/FullScreenNavigation'
 // 순수 좌표 계산 및 코스 기반 1인칭 네비게이션
 import {
   getProgressOnRoute,
@@ -205,6 +202,9 @@ export default function RunningMap({
   
   // 네비게이션 모드 상태 (지도 회전 + 방향 추적)
   const [isNavigationMode, setIsNavigationMode] = useState(false)
+  
+  // 전체 화면 네비게이션 상태
+  const [isFullScreenNavActive, setIsFullScreenNavActive] = useState(false)
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState>({
     isActive: false,
     trackingWatchId: null,
@@ -1175,6 +1175,28 @@ export default function RunningMap({
     }
   }, [isNavigationMode, firstPersonState.trackingWatchId, currentMarker, map, onNavigationUpdate])
 
+  // 전체 화면 네비게이션 시작
+  const startFullScreenNavigation = useCallback(() => {
+    if (mode !== 'running') {
+      alert('런닝 시작 후에 전체 화면 네비게이션을 사용할 수 있습니다.')
+      return
+    }
+    
+    if (!courseRoute || courseRoute.length < 2) {
+      alert('코스 데이터가 없습니다.')
+      return
+    }
+
+    setIsFullScreenNavActive(true)
+    console.log('🚗 전체 화면 네비게이션 시작')
+  }, [mode, courseRoute])
+
+  // 전체 화면 네비게이션 종료
+  const stopFullScreenNavigation = useCallback(() => {
+    setIsFullScreenNavActive(false)
+    console.log('🛑 전체 화면 네비게이션 종료')
+  }, [])
+
   // onNavigationReady 콜백 호출 (네비게이션 모드 함수들 전달)
   useEffect(() => {
     if (onNavigationReady) {
@@ -1329,6 +1351,17 @@ export default function RunningMap({
       {/* 네비게이션 모드 토글 버튼들 (런닝 모드에서만) */}
       {mode === 'running' && (
         <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+          {/* 전체 화면 네비게이션 버튼 */}
+          <button
+            onClick={startFullScreenNavigation}
+            className="w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-purple-600 border-purple-600 text-white hover:bg-purple-700"
+            title="전체 화면 네비게이션"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </button>
+
           {/* 네비게이션 모드 토글 */}
           <button
             onClick={isNavigationMode ? stopNavigationMode : startNavigationMode}
@@ -1500,6 +1533,14 @@ export default function RunningMap({
         </div>
       )}
 
+      {/* 전체 화면 네비게이션 */}
+      <FullScreenNavigation
+        isActive={isFullScreenNavActive}
+        onClose={stopFullScreenNavigation}
+        courseRoute={courseRoute}
+        currentPosition={currentPosition}
+        onLocationUpdate={onLocationUpdate}
+      />
     </div>
   )
 }
