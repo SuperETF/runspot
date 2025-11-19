@@ -18,6 +18,12 @@ import {
   generateKakaoBicycleNavUrl, 
   generateKakaoWebFallbackUrl 
 } from '@/services/routeOptimization'
+// 앱 내 카카오맵 네비게이션
+import { 
+  kakaoNavService, 
+  type KakaoNavigationRoute, 
+  type TurnInstruction 
+} from '@/services/kakaoNavigation'
 // 카카오 길찾기 기반 네비게이션 및 음성 안내
 import { 
   createRunningNavigation,
@@ -173,7 +179,6 @@ export default function RunningMap({
   const [routePath, setRoutePath] = useState<any[]>([])
   const [routePolyline, setRoutePolyline] = useState<any>(null)
   const [directionMarkers, setDirectionMarkers] = useState<any[]>([])
-  const [isNavigationMode, setIsNavigationMode] = useState(false)
   const [logoBase64, setLogoBase64] = useState<string>('')
 
   // 네비게이션 상태
@@ -189,13 +194,17 @@ export default function RunningMap({
   const [advancedNavigation, setAdvancedNavigation] = useState<NavigationState | null>(null)
   const [lastVoiceGuidance, setLastVoiceGuidance] = useState<string>('')
 
-  // 1인칭 추적 모드 관련 상태
-  const [isFirstPersonMode, setIsFirstPersonMode] = useState(false)
-  // 코스 기반 1인칭 네비게이션 상태 (진행률, 이탈 여부)
-  const [navigationProgress, setNavigationProgress] = useState<NavigationProgress | null>(null)
   // 보행자 네비게이션 MVP 상태
   const [pedestrianProgress, setPedestrianProgress] = useState<PedestrianProgress | null>(null)
   const [routePoints, setRoutePoints] = useState<RoutePointWithDistance[]>([])
+  
+  // 앱 내 카카오맵 네비게이션 상태 (자동차 네비게이션 스타일)
+  const [isInAppNavActive, setIsInAppNavActive] = useState(false)
+  const [navigationRoute, setNavigationRoute] = useState<KakaoNavigationRoute | null>(null)
+  const [currentTurnInstruction, setCurrentTurnInstruction] = useState<TurnInstruction | null>(null)
+  
+  // 네비게이션 모드 상태 (지도 회전 + 방향 추적)
+  const [isNavigationMode, setIsNavigationMode] = useState(false)
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState>({
     isActive: false,
     trackingWatchId: null,
@@ -243,6 +252,110 @@ export default function RunningMap({
       onProgressUpdate(null)
     }
   }, [mode, currentPosition, routePoints, onProgressUpdate])
+
+  // 앱 내 카카오맵 네비게이션 시작
+  const startInAppNavigation = useCallback(async () => {
+    if (!courseRoute || courseRoute.length === 0 || !userLocation) {
+      alert('경로 정보가 없거나 현재 위치를 확인할 수 없습니다.')
+      return
+    }
+
+    try {
+      console.log('🗺️ 앱 내 카카오맵 네비게이션 시작')
+      
+      // 시작점과 끝점 설정
+      const origin = { lat: userLocation.lat, lng: userLocation.lng }
+      const destination = { lat: courseRoute[courseRoute.length - 1].lat, lng: courseRoute[courseRoute.length - 1].lng }
+      
+      // 중간 경유지 (GPX 포인트 중 일부만 사용)
+      const waypoints = courseRoute
+        .slice(1, -1)
+        .filter((_, index) => index % 10 === 0) // 10개마다 하나씩만 경유지로 사용
+        .map(point => ({ lat: point.lat, lng: point.lng }))
+
+      // 카카오 네비게이션 서비스로 경로 계산
+      const route = await kakaoNavService.calculateRoute(origin, destination, waypoints)
+      setNavigationRoute(route)
+      setIsInAppNavActive(true)
+
+      // 지도에 경로 표시
+      if (map && route) {
+        const kakao = (window as any).kakao
+        
+        // 기존 경로 폴리라인 제거
+        if (routePolyline) {
+          routePolyline.setMap(null)
+        }
+
+        // 새로운 네비게이션 경로 폴리라인 생성
+        const routePath = route.segments.flatMap(segment => 
+          segment.points.map(point => new kakao.maps.LatLng(point.lat, point.lng))
+        )
+        
+        const newRoutePolyline = new kakao.maps.Polyline({
+          path: routePath,
+          strokeWeight: 6,
+          strokeColor: '#FF6B00', // 주황색으로 네비게이션 경로 표시
+          strokeOpacity: 0.9,
+          strokeStyle: 'solid'
+        })
+
+        newRoutePolyline.setMap(map)
+        setRoutePolyline(newRoutePolyline)
+
+        // 지도 범위를 경로에 맞게 조정
+        const bounds = new kakao.maps.LatLngBounds()
+        routePath.forEach(point => bounds.extend(point))
+        map.setBounds(bounds, 50)
+      }
+
+      console.log('✅ 앱 내 네비게이션 경로 계산 완료:', route)
+    } catch (error) {
+      console.error('❌ 앱 내 네비게이션 시작 실패:', error)
+      alert('네비게이션을 시작할 수 없습니다. 다시 시도해주세요.')
+    }
+  }, [courseRoute, userLocation, map, routePolyline])
+
+  // 앱 내 네비게이션 중지
+  const stopInAppNavigation = useCallback(() => {
+    setIsInAppNavActive(false)
+    setNavigationRoute(null)
+    setCurrentTurnInstruction(null)
+    
+    // 네비게이션 경로 폴리라인 제거
+    if (routePolyline) {
+      routePolyline.setMap(null)
+      setRoutePolyline(null)
+    }
+
+    // 원래 코스 폴리라인 복원
+    if (map && courseRoute.length > 0) {
+      const kakao = (window as any).kakao
+      const path = courseRoute.map((point: any) => new kakao.maps.LatLng(point.lat, point.lng))
+      const coursePolylineRestored = new kakao.maps.Polyline({
+        path: path,
+        strokeWeight: 4,
+        strokeColor: mode === 'running' ? '#FF6B00' : '#00FF88',
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid'
+      })
+      coursePolylineRestored.setMap(map)
+      setCoursePolyline(coursePolylineRestored)
+    }
+
+    console.log('🛑 앱 내 네비게이션 중지')
+  }, [routePolyline, map, courseRoute, mode])
+
+  // 현재 위치 기준 턴 안내 업데이트
+  useEffect(() => {
+    if (isInAppNavActive && navigationRoute && currentPosition) {
+      const turnInstruction = kakaoNavService.getNextTurnInstruction(
+        navigationRoute, 
+        { lat: currentPosition.lat, lng: currentPosition.lng }
+      )
+      setCurrentTurnInstruction(turnInstruction)
+    }
+  }, [isInAppNavActive, navigationRoute, currentPosition])
 
   // 시작점 도착 상태 확인 및 업데이트
   useEffect(() => {
@@ -800,55 +913,53 @@ export default function RunningMap({
     }
   }, [map, courseRoute, showStartPoint, logoBase64, coursePolyline, startPointMarker, mode])
 
-  // 1인칭 추적 모드 시작
-  const startFirstPersonMode = useCallback(() => {
+  // 네비게이션 모드 시작 (자동차 네비게이션 스타일)
+  const startNavigationMode = useCallback(() => {
     if (mode !== 'running') {
-      DEBUG && console.warn('[FirstPersonMode] 런닝 모드가 아님, 1인칭 모드 비활성화')
-      alert('런닝 시작 후에 1인칭 모드를 사용할 수 있습니다.')
+      DEBUG && console.warn('[NavigationMode] 런닝 모드가 아님, 네비게이션 모드 비활성화')
+      alert('런닝 시작 후에 네비게이션 모드를 사용할 수 있습니다.')
       return
     }
     
     if (!courseRoute || courseRoute.length < 2) {
-      DEBUG && console.warn('[FirstPersonMode] 코스 데이터가 없음')
+      DEBUG && console.warn('[NavigationMode] 코스 데이터가 없음')
       return
     }
     
     if (!map) {
-      DEBUG && console.warn('[FirstPersonMode] 지도가 준비되지 않음')
+      DEBUG && console.warn('[NavigationMode] 지도가 초기화되지 않음')
+      return
+    }
+
+    DEBUG && console.log('🎯 네비게이션 모드 시작')
+    
+    if (isNavigationMode) {
+      DEBUG && console.log('[NavigationMode] 이미 활성화됨')
       return
     }
     
-    if (!navigator.geolocation) {
-      DEBUG && console.warn('[FirstPersonMode] Geolocation API 지원 안함')
-      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.')
-      return
-    }
-    
-    DEBUG && console.log('🚀 1인칭 추적 모드 시작')
-    
-    setIsFirstPersonMode(true)
+    setIsNavigationMode(true)
     
     // 네비게이션 상태 업데이트 콜백 호출
     if (onNavigationUpdate) {
-      onNavigationUpdate({ isFirstPersonMode: true } as any)
+      onNavigationUpdate({ isNavigationMode: true } as any)
     }
     
     // 기존 추적 정리
-    if (firstPersonState.trackingWatchId !== null) {
+    if (firstPersonState.trackingWatchId !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(firstPersonState.trackingWatchId)
-      setFirstPersonState(prev => ({ ...prev, trackingWatchId: null }))
     }
 
-    // 실시간 위치 추적 시작
-    const options: PositionOptions = {
+    // 위치 추적 옵션
+    const options = {
       enableHighAccuracy: true,
       timeout: 10000,
-      maximumAge: 5000
+      maximumAge: 1000
     }
 
     const newWatchId = navigator.geolocation.watchPosition(
       (position) => {
-        if (!isFirstPersonMode || !isMountedRef.current || !map) {
+        if (!isNavigationMode || !isMountedRef.current || !map) {
           return
         }
         
@@ -858,81 +969,61 @@ export default function RunningMap({
         }
 
         const timestamp = Date.now()
-        DEBUG && console.log('📍 1인칭 모드 위치 업데이트:', newPosition)
+        DEBUG && console.log('📍 네비게이션 모드 위치 업데이트:', newPosition)
 
         // 위치 히스토리 업데이트 및 상태 계산
+        let currentSpeed = 0
+        let smoothBearing = 0
+        
         setFirstPersonState(prev => {
           const newHistory = [...prev.positionHistory, { ...newPosition, timestamp }].slice(-8)
-          const speed = calculateSpeed(newHistory)
-          const smoothBearing = calculateSmoothBearing(newHistory)
+          currentSpeed = calculateSpeed(newHistory)
+          smoothBearing = calculateSmoothBearing(newHistory)
           
           return {
             ...prev,
             lastPosition: newPosition,
             positionHistory: newHistory,
-            currentSpeed: speed,
+            currentSpeed,
             smoothBearing
           }
         })
 
-        // 1인칭 모드에서 지도 카메라 및 회전 처리
-        const kakao = (window as any).kakao
-        const center = new kakao.maps.LatLng(newPosition.lat, newPosition.lng)
-        map.setCenter(center)
-        map.setLevel(2) // 1인칭 모드 전용 줌 레벨
+        // 지도 중심을 현재 위치로 이동
+        map.setCenter(new kakao.maps.LatLng(newPosition.lat, newPosition.lng))
         
-        // 방향 계산 후 지도 회전 (속도가 충분할 때만)
-        if (firstPersonState.lastPosition && firstPersonState.currentSpeed > NAVIGATION_CONSTANTS.MIN_SPEED_FOR_BEARING) {
-          // 지도 컨테이너 회전 (CSS transform 사용)
-          if (mapContainer.current) {
-            const rotationDegree = firstPersonState.smoothBearing
-            mapContainer.current.style.transform = `rotate(${rotationDegree}deg)`
-            mapContainer.current.style.transformOrigin = 'center center'
-            mapContainer.current.style.transition = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
-          }
+        // 현재 위치 마커 업데이트
+        if (currentMarker) {
+          currentMarker.setPosition(new kakao.maps.LatLng(newPosition.lat, newPosition.lng))
           
-          DEBUG && console.log('🧭 지도 회전:', firstPersonState.smoothBearing.toFixed(1) + '도')
+          // 방향이 있으면 방향 화살표로 마커 변경
+          if (smoothBearing !== null && currentSpeed > 0.5) { // 0.5 m/s (1.8 km/h) 이상일 때만
+            const arrowImageSrc = createDirectionArrowImage(smoothBearing)
+            const arrowImage = new kakao.maps.MarkerImage(
+              arrowImageSrc,
+              new kakao.maps.Size(40, 40),
+              {
+                offset: new kakao.maps.Point(20, 20)
+              }
+            )
+            currentMarker.setImage(arrowImage)
+          }
+        }
+        
+        // 지도 회전 (CSS transform 사용) - 자동차 네비게이션 스타일
+        if (mapContainer.current && smoothBearing !== null) {
+          const rotation = -smoothBearing // 북쪽을 위로 맞추기 위해 음수
+          mapContainer.current.style.transform = `rotate(${rotation}deg)`
+          mapContainer.current.style.transformOrigin = 'center center'
+          mapContainer.current.style.transition = 'transform 0.3s ease-out'
         }
       
-        // 현재 위치 마커 업데이트 (1인칭 모드에서는 화살표 마커 사용)
-        if (currentMarker) {
-          currentMarker.setPosition(center)
+        // 코스 진행률 계산 및 업데이트 (네비게이션 모드에서만)
+        if (courseRoute.length > 0) {
+          const progress = getProgressOnRoute(courseRoute, newPosition)
           
-          // 속도가 충분할 때만 방향 화살표 업데이트
-          if (firstPersonState.currentSpeed > NAVIGATION_CONSTANTS.MIN_SPEED_FOR_BEARING) {
-            const arrowImageSrc = createDirectionArrowImage(firstPersonState.smoothBearing)
-            const imageSize = new kakao.maps.Size(40, 40)
-            const markerImage = new kakao.maps.MarkerImage(arrowImageSrc, imageSize)
-            currentMarker.setImage(markerImage)
-          }
-        } else {
-          // 초기 방향 화살표 마커 생성
-          const arrowImageSrc = createDirectionArrowImage(firstPersonState.smoothBearing)
-          const imageSize = new kakao.maps.Size(40, 40)
-          const markerImage = new kakao.maps.MarkerImage(arrowImageSrc, imageSize)
-          
-          const marker = new kakao.maps.Marker({
-            position: center,
-            image: markerImage,
-            map: map
-          })
-          setCurrentMarker(marker)
-        }
-
-        // 코스 진행률 계산
-        if (courseRoute.length > 1) {
-          const routePoints: RoutePoint[] = courseRoute.map((point, index) => ({
-            lat: point.lat,
-            lng: point.lng,
-            order: index
-          }))
-
-          const progress = getProgressOnRoute(routePoints, newPosition)
-          setNavigationProgress(progress)
-          
-          DEBUG && console.log('📊 코스 진행률:', {
+          DEBUG && console.log('🎯 네비게이션 모드 - 코스 진행률:', {
             진행률: `${(progress.progressRatio * 100).toFixed(1)}%`,
-            누적거리: `${progress.cumulativeDist.toFixed(0)}m`,
             남은거리: `${progress.remainingDistance.toFixed(0)}m`,
             코스이탈: progress.isOffRoute ? '예' : '아니오',
             이탈거리: `${progress.distanceToSegment.toFixed(1)}m`
@@ -965,7 +1056,7 @@ export default function RunningMap({
     )
 
     setFirstPersonState(prev => ({ ...prev, trackingWatchId: newWatchId }))
-  }, [map, currentMarker, firstPersonState.trackingWatchId, firstPersonState.lastPosition, firstPersonState.currentSpeed, firstPersonState.smoothBearing, courseRoute, isFirstPersonMode, mode, onLocationUpdate, onNavigationUpdate])
+  }, [map, currentMarker, firstPersonState.trackingWatchId, firstPersonState.lastPosition, firstPersonState.currentSpeed, firstPersonState.smoothBearing, courseRoute, isNavigationMode, mode, onLocationUpdate, onNavigationUpdate])
 
   // 속도 계산 함수
   const calculateSpeed = useCallback((positions: {lat: number, lng: number, timestamp: number}[]) => {
@@ -1027,20 +1118,20 @@ export default function RunningMap({
     return canvas.toDataURL()
   }, [])
 
-  // 1인칭 추적 모드 종료
-  const stopFirstPersonMode = useCallback(() => {
-    DEBUG && console.log('🛑 1인칭 추적 모드 종료')
+  // 네비게이션 모드 종료
+  const stopNavigationMode = useCallback(() => {
+    DEBUG && console.log('🛑 네비게이션 모드 종료')
     
-    if (!isFirstPersonMode) {
-      DEBUG && console.log('[FirstPersonMode] 이미 비활성화됨')
+    if (!isNavigationMode) {
+      DEBUG && console.log('[NavigationMode] 이미 비활성화됨')
       return
     }
     
-    setIsFirstPersonMode(false)
+    setIsNavigationMode(false)
     
     // 네비게이션 상태 업데이트 콜백 호출
     if (onNavigationUpdate) {
-      onNavigationUpdate({ isFirstPersonMode: false } as any)
+      onNavigationUpdate({ isNavigationMode: false } as any)
     }
     
     // 위치 추적 정리
@@ -1067,7 +1158,7 @@ export default function RunningMap({
       
       // 전환 완료 후 transition 제거
       setTimeout(() => {
-        if (mapContainer.current && !isFirstPersonMode) {
+        if (mapContainer.current && !isNavigationMode) {
           mapContainer.current.style.transition = ''
         }
       }, 500)
@@ -1082,14 +1173,14 @@ export default function RunningMap({
       currentMarker.setMap(null)
       setCurrentMarker(marker)
     }
-  }, [isFirstPersonMode, firstPersonState.trackingWatchId, currentMarker, map, onNavigationUpdate])
+  }, [isNavigationMode, firstPersonState.trackingWatchId, currentMarker, map, onNavigationUpdate])
 
-  // onNavigationReady 콜백 호출 (1인칭 추적 모드 함수들 전달)
+  // onNavigationReady 콜백 호출 (네비게이션 모드 함수들 전달)
   useEffect(() => {
     if (onNavigationReady) {
-      onNavigationReady(startFirstPersonMode, stopFirstPersonMode, isFirstPersonMode)
+      onNavigationReady(startNavigationMode, stopNavigationMode, isNavigationMode)
     }
-  }, [onNavigationReady, startFirstPersonMode, stopFirstPersonMode, isFirstPersonMode])
+  }, [onNavigationReady, startNavigationMode, stopNavigationMode, isNavigationMode])
 
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
@@ -1132,13 +1223,45 @@ export default function RunningMap({
           position: 'relative',
           isolation: 'isolate',
           zIndex: 0,
-          height: isFirstPersonMode ? '75vh' : '67vh', // 화면의 3분의 2 이상
+          height: isNavigationMode ? '75vh' : '67vh', // 화면의 3분의 2 이상
           minHeight: '400px' // 최소 높이 보장
         }}
       />
       
+      {/* 앱 내 카카오맵 네비게이션: 턴바이턴 안내 */}
+      {isInAppNavActive && currentTurnInstruction && (
+        <motion.div 
+          className="absolute top-2 left-4 right-4 z-20"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+        >
+          <div className="bg-blue-600/95 backdrop-blur-sm rounded-lg px-4 py-3 border border-blue-500">
+            <div className="flex items-center gap-3 text-white">
+              <div className="text-2xl">
+                {kakaoNavService.getTurnIcon(currentTurnInstruction.turnType)}
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-sm">
+                  {currentTurnInstruction.instruction}
+                </div>
+                <div className="text-xs text-blue-200">
+                  {currentTurnInstruction.distance}m 후
+                </div>
+              </div>
+              <button
+                onClick={stopInAppNavigation}
+                className="text-blue-200 hover:text-white text-xs px-2 py-1 rounded"
+              >
+                종료
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* 보행자 네비게이션 MVP: 코스 이탈 경고 배너 (런닝 모드에서 표시) */}
-      {mode === 'running' && pedestrianProgress?.isOffCourse && (
+      {mode === 'running' && pedestrianProgress?.isOffCourse && !isInAppNavActive && (
         <motion.div 
           className="absolute top-2 left-4 right-4 z-10"
           initial={{ opacity: 0, y: -20 }}
@@ -1188,8 +1311,8 @@ export default function RunningMap({
               </div>
             </div>
             
-            {/* 1인칭 모드에서는 추가 정보 표시 */}
-            {isFirstPersonMode && (
+            {/* 네비게이션 모드에서는 추가 정보 표시 */}
+            {isNavigationMode && (
               <div className="flex items-center justify-between mt-1 text-xs text-gray-400">
                 <div>
                   속도: {(firstPersonState.currentSpeed * 3.6).toFixed(1)} km/h
@@ -1206,22 +1329,41 @@ export default function RunningMap({
       {/* 네비게이션 모드 토글 버튼들 (런닝 모드에서만) */}
       {mode === 'running' && (
         <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-          {/* 1인칭 모드 토글 */}
+          {/* 네비게이션 모드 토글 */}
           <button
-            onClick={isFirstPersonMode ? stopFirstPersonMode : startFirstPersonMode}
+            onClick={isNavigationMode ? stopNavigationMode : startNavigationMode}
             className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
-              isFirstPersonMode 
+              isNavigationMode 
                 ? 'bg-[#00FF88] border-[#00FF88] text-black' 
                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
-            title={isFirstPersonMode ? '1인칭 모드 종료' : '1인칭 모드 시작'}
+            title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </button>
 
-          {/* 카카오맵 네비게이션 버튼 */}
+          {/* 앱 내 카카오맵 네비게이션 버튼 */}
+          <button
+            onClick={isInAppNavActive ? stopInAppNavigation : startInAppNavigation}
+            className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
+              isInAppNavActive 
+                ? 'bg-blue-600 border-blue-600 text-white' 
+                : 'bg-orange-500 border-orange-500 text-white hover:bg-orange-600'
+            }`}
+            title={isInAppNavActive ? '앱 내 네비게이션 중지' : '앱 내 네비게이션 시작'}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isInAppNavActive ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              )}
+            </svg>
+          </button>
+
+          {/* 외부 카카오맵 네비게이션 버튼 (기존) */}
           <button
             onClick={() => {
               if (courseRoute.length > 0 && userLocation) {
@@ -1240,16 +1382,16 @@ export default function RunningMap({
                   window.open(fullRouteNavUrl, '_blank')
                 }
                 
-                console.log('🚴‍♂️ 런닝 중 카카오맵 네비게이션 실행:', fullRouteNavUrl)
+                console.log('🚴‍♂️ 외부 카카오맵 네비게이션 실행:', fullRouteNavUrl)
               } else {
                 alert('경로 정보가 없거나 현재 위치를 확인할 수 없습니다.')
               }
             }}
-            className="w-12 h-12 rounded-full shadow-lg border-2 bg-orange-500 border-orange-500 text-white hover:bg-orange-600 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-            title="카카오맵 네비게이션"
+            className="w-12 h-12 rounded-full shadow-lg border-2 bg-gray-600 border-gray-600 text-white hover:bg-gray-700 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+            title="외부 카카오맵 네비게이션"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </button>
 
@@ -1274,7 +1416,7 @@ export default function RunningMap({
       {/* GPS 상태 표시 및 내 위치 버튼 */}
       <div className={`absolute flex items-center gap-2 ${
         mode === 'running' 
-          ? (isFirstPersonMode ? 'bottom-4 right-4' : 'top-4 left-4')
+          ? (isNavigationMode ? 'bottom-4 right-4' : 'top-4 left-4')
           : 'top-4 right-4'
       }`}>
         {/* GPS 상태 */}
