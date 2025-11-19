@@ -3,7 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GPSCoordinate } from '../../types/database'
-import { NavigationProgress } from '../../utils/navigationEngine'
+import { 
+  NavigationProgress,
+  getProgressOnRoute,
+  haversineDistance,
+  calculateBearing,
+  calculateRouteDistance
+} from '../../utils/navigationEngine'
 
 interface FullScreenNavigationProps {
   isActive: boolean
@@ -34,15 +40,39 @@ export default function FullScreenNavigation({
   const [currentMarker, setCurrentMarker] = useState<any>(null)
   const [routePolyline, setRoutePolyline] = useState<any>(null)
   const [watchId, setWatchId] = useState<number | null>(null)
+
+  // ▶ 휴대폰 실제 방향(나침반/자이로) 기반 헤딩
+  const [deviceHeading, setDeviceHeading] = useState<number | null>(null)
   
+  // ▶ 실제 경로 진행 상태
+  const [routeProgress, setRouteProgress] = useState<NavigationProgress | null>(null)
+
   const [navigationState, setNavigationState] = useState<NavigationState>({
     currentSpeed: 0,
     currentBearing: 0,
     nextTurnDistance: 500,
-    nextTurnDirection: "직진하세요",
+    nextTurnDirection: '직진하세요',
     remainingDistance: 2500,
     estimatedTime: 12
   })
+
+  // (선택) iOS에서 쓰려면, 버튼 클릭 등 사용자 제스처 안에서 호출해서 권한 요청
+  // export 해서 상위에서 불러도 되고, 이 컴포넌트 안에서 버튼 하나 만들어도 됨.
+  const requestDeviceOrientationPermission = async () => {
+    if (typeof window === 'undefined') return
+    const AnyDeviceOrientationEvent = (window as any).DeviceOrientationEvent
+    if (
+      AnyDeviceOrientationEvent &&
+      typeof AnyDeviceOrientationEvent.requestPermission === 'function'
+    ) {
+      try {
+        const res = await AnyDeviceOrientationEvent.requestPermission()
+        console.log('📡 DeviceOrientation permission:', res)
+      } catch (e) {
+        console.error('DeviceOrientation permission error:', e)
+      }
+    }
+  }
 
   // 카카오맵 초기화
   useEffect(() => {
@@ -56,10 +86,10 @@ export default function FullScreenNavigation({
 
       const kakao = (window as any).kakao
       const mapOption = {
-        center: currentPosition 
+        center: currentPosition
           ? new kakao.maps.LatLng(currentPosition.lat, currentPosition.lng)
-          : new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 2, // 더 가까운 줌 레벨
+          : new kakao.maps.LatLng(37.5665, 126.978),
+        level: 2,
         mapTypeId: kakao.maps.MapTypeId.ROADMAP
       }
 
@@ -77,18 +107,18 @@ export default function FullScreenNavigation({
 
       // 경로 폴리라인
       if (courseRoute.length > 0) {
-        const path = courseRoute.map(point => 
-          new kakao.maps.LatLng(point.lat, point.lng)
+        const path = courseRoute.map(
+          (point) => new kakao.maps.LatLng(point.lat, point.lng)
         )
-        
+
         const polyline = new kakao.maps.Polyline({
-          path: path,
+          path,
           strokeWeight: 8,
           strokeColor: '#FF6B35',
           strokeOpacity: 0.8,
           strokeStyle: 'solid'
         })
-        
+
         polyline.setMap(newMap)
         setRoutePolyline(polyline)
       }
@@ -99,7 +129,46 @@ export default function FullScreenNavigation({
     initializeMap()
   }, [isActive, currentPosition, courseRoute, map])
 
-  // GPS 추적 시작
+  // ▶ 휴대폰 기울기/방향에 맞춰 헤딩 업데이트 (DeviceOrientation)
+  useEffect(() => {
+    if (!isActive) return
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      // iOS Safari: webkitCompassHeading
+      const anyEvent = event as any
+      let heading: number | null = null
+
+      if (typeof anyEvent.webkitCompassHeading === 'number') {
+        heading = anyEvent.webkitCompassHeading as number
+      } else if (typeof event.alpha === 'number') {
+        // alpha: 0~360, 디바이스 기준 → 대략적인 북쪽 기준 헤딩으로 변환
+        heading = 360 - event.alpha
+      }
+
+      if (heading != null && Number.isFinite(heading)) {
+        setDeviceHeading(heading)
+      }
+    }
+
+    window.addEventListener('deviceorientation', handleOrientation, true)
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation, true)
+    }
+  }, [isActive])
+
+  // ▶ 실제 회전은 deviceHeading 기준으로 처리 (폰이 보는 방향이 정면)
+  useEffect(() => {
+    if (!isActive || !mapContainer.current) return
+    if (deviceHeading == null) return
+
+    const rotation = -deviceHeading
+    mapContainer.current.style.transform = `rotate(${rotation}deg)`
+    mapContainer.current.style.transformOrigin = 'center center'
+    mapContainer.current.style.transition = 'transform 0.3s ease-out'
+  }, [isActive, deviceHeading])
+
+  // GPS 추적 시작 (위치 + 속도만 담당, 회전은 deviceHeading에 위임)
   useEffect(() => {
     if (!isActive || !map) return
 
@@ -116,38 +185,98 @@ export default function FullScreenNavigation({
           lng: position.coords.longitude
         }
 
+        const kakao = (window as any).kakao
+
         // 지도 중심 이동
-        map.setCenter(new (window as any).kakao.maps.LatLng(newPos.lat, newPos.lng))
+        map.setCenter(new kakao.maps.LatLng(newPos.lat, newPos.lng))
 
         // 마커 업데이트
         if (currentMarker) {
-          currentMarker.setPosition(new (window as any).kakao.maps.LatLng(newPos.lat, newPos.lng))
+          currentMarker.setPosition(new kakao.maps.LatLng(newPos.lat, newPos.lng))
         }
 
-        // 속도 및 방향 계산
-        const speed = (position.coords.speed || 0) * 3.6 // m/s to km/h
-        const bearing = position.coords.heading || 0
+        // 속도 계산
+        const speed = (position.coords.speed || 0) * 3.6 // m/s → km/h
 
-        setNavigationState(prev => ({
+        // ▶ 실제 경로 진행률 계산
+        let progress: NavigationProgress | null = null
+        if (courseRoute.length > 1) {
+          // GPSCoordinate를 RoutePoint로 변환
+          const routePoints = courseRoute.map((point, index) => ({
+            lat: point.lat,
+            lng: point.lng,
+            order: index
+          }))
+          progress = getProgressOnRoute(routePoints, newPos)
+          setRouteProgress(progress)
+        }
+
+        // ▶ 다음 웨이포인트 계산
+        let nextTurnDistance = 500 // 기본값
+        let nextTurnDirection = '직진하세요'
+        
+        if (progress && progress.nextWaypoint) {
+          nextTurnDistance = Math.round(haversineDistance(newPos, progress.nextWaypoint))
+          
+          // 방향 계산
+          const bearing = calculateBearing(newPos, progress.nextWaypoint)
+          const currentHeading = deviceHeading || 0
+          const relativeBearing = (bearing - currentHeading + 360) % 360
+          
+          // 방향 안내 텍스트
+          if (relativeBearing < 30 || relativeBearing > 330) {
+            nextTurnDirection = '직진하세요'
+          } else if (relativeBearing >= 30 && relativeBearing < 150) {
+            nextTurnDirection = '우회전하세요'
+          } else if (relativeBearing >= 150 && relativeBearing < 210) {
+            nextTurnDirection = 'U턴하세요'
+          } else {
+            nextTurnDirection = '좌회전하세요'
+          }
+        }
+
+        // ▶ 코스 이탈 체크
+        if (progress && progress.isOffRoute) {
+          nextTurnDirection = '코스로 돌아가세요'
+        }
+
+        // ▶ 예상 완주 시간 계산
+        let estimatedTime = 12 // 기본값
+        if (progress && speed > 0) {
+          const remainingKm = progress.remainingDistance / 1000
+          estimatedTime = Math.round((remainingKm / speed) * 60) // 분 단위
+        }
+
+        setNavigationState((prev) => ({
           ...prev,
           currentSpeed: speed,
-          currentBearing: bearing
+          currentBearing:
+            deviceHeading != null && Number.isFinite(deviceHeading)
+              ? deviceHeading
+              : prev.currentBearing,
+          nextTurnDistance,
+          nextTurnDirection,
+          remainingDistance: progress ? progress.remainingDistance : prev.remainingDistance,
+          estimatedTime
         }))
-
-        // 지도 회전 (자동차 네비게이션 스타일)
-        if (mapContainer.current && bearing !== null) {
-          const rotation = -bearing
-          mapContainer.current.style.transform = `rotate(${rotation}deg)`
-          mapContainer.current.style.transformOrigin = 'center center'
-          mapContainer.current.style.transition = 'transform 0.5s ease-out'
-        }
 
         // 위치 업데이트 콜백
         if (onLocationUpdate) {
           onLocationUpdate(newPos)
         }
 
-        console.log('📍 네비게이션 위치 업데이트:', newPos, `속도: ${speed.toFixed(1)}km/h`)
+        console.log(
+          '📍 네비게이션 위치 업데이트:',
+          newPos,
+          `속도: ${speed.toFixed(1)}km/h`,
+          `heading(device): ${deviceHeading}`,
+          progress ? {
+            진행률: `${(progress.progressRatio * 100).toFixed(1)}%`,
+            남은거리: `${(progress.remainingDistance / 1000).toFixed(2)}km`,
+            코스이탈: progress.isOffRoute ? '예' : '아니오',
+            다음턴: `${nextTurnDistance}m ${nextTurnDirection}`
+          } : '경로 계산 중...'
+        )
       },
       (error) => {
         console.error('❌ GPS 오류:', error)
@@ -162,7 +291,7 @@ export default function FullScreenNavigation({
         navigator.geolocation.clearWatch(newWatchId)
       }
     }
-  }, [isActive, map, currentMarker, onLocationUpdate])
+  }, [isActive, map, currentMarker, onLocationUpdate, deviceHeading])
 
   // 네비게이션 종료
   const handleClose = useCallback(() => {
@@ -170,12 +299,12 @@ export default function FullScreenNavigation({
       navigator.geolocation.clearWatch(watchId)
       setWatchId(null)
     }
-    
+
     // 지도 회전 초기화
     if (mapContainer.current) {
       mapContainer.current.style.transform = 'none'
     }
-    
+
     onClose()
   }, [watchId, onClose])
 
@@ -196,8 +325,18 @@ export default function FullScreenNavigation({
             <div className="bg-blue-600 rounded-2xl p-4 mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                  <svg
+                    className="w-6 h-6 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 11l5-5m0 0l5 5m-5-5v12"
+                    />
                   </svg>
                 </div>
                 <div className="flex-1">
@@ -216,23 +355,29 @@ export default function FullScreenNavigation({
               <div className="flex items-center gap-4">
                 <div>
                   <span className="text-gray-300">속도</span>
-                  <span className="ml-2 font-semibold">{navigationState.currentSpeed.toFixed(0)} km/h</span>
+                  <span className="ml-2 font-semibold">
+                    {navigationState.currentSpeed.toFixed(0)} km/h
+                  </span>
                 </div>
                 <div>
                   <span className="text-gray-300">남은 거리</span>
-                  <span className="ml-2 font-semibold">{(navigationState.remainingDistance / 1000).toFixed(1)} km</span>
+                  <span className="ml-2 font-semibold">
+                    {(navigationState.remainingDistance / 1000).toFixed(1)} km
+                  </span>
                 </div>
               </div>
               <div>
                 <span className="text-gray-300">예상 시간</span>
-                <span className="ml-2 font-semibold">{navigationState.estimatedTime}분</span>
+                <span className="ml-2 font-semibold">
+                  {navigationState.estimatedTime}분
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* 지도 영역 */}
-        <div 
+        <div
           ref={mapContainer}
           className="w-full h-full"
           style={{
@@ -262,11 +407,29 @@ export default function FullScreenNavigation({
                 </div>
               </div>
 
-              {/* 설정 버튼 */}
-              <button className="bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-xl transition-colors">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              {/* 설정 / 센서 활성화 버튼 예시 */}
+              <button
+                className="bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-xl transition-colors"
+                onClick={requestDeviceOrientationPermission}
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
               </button>
             </div>
