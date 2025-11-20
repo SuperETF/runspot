@@ -3,12 +3,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GPSCoordinate } from '../../types/database'
-import { 
+import {
   NavigationProgress,
   getProgressOnRoute,
   haversineDistance,
-  calculateBearing,
-  calculateRouteDistance
+  calculateBearing
 } from '../../utils/navigationEngine'
 
 interface FullScreenNavigationProps {
@@ -28,6 +27,21 @@ interface NavigationState {
   estimatedTime: number // minutes
 }
 
+const DEAD_ZONE_DEG = 5          // 이 정도 이하면 무시
+const SMOOTHING_FACTOR = 0.2     // 0~1 (작을수록 더 부드럽게)
+const ROTATION_TRANSITION_MS = 350 // 회전 애니메이션 시간
+
+const normalizeAngle = (angle: number) => {
+  const a = angle % 360
+  return a < 0 ? a + 360 : a
+}
+
+const shortestAngleDiff = (from: number, to: number) => {
+  const diff = normalizeAngle(to) - normalizeAngle(from)
+  const wrapped = ((diff + 540) % 360) - 180
+  return wrapped
+}
+
 export default function FullScreenNavigation({
   isActive,
   onClose,
@@ -41,10 +55,12 @@ export default function FullScreenNavigation({
   const [routePolyline, setRoutePolyline] = useState<any>(null)
   const [watchId, setWatchId] = useState<number | null>(null)
 
-  // ▶ 휴대폰 실제 방향(나침반/자이로) 기반 헤딩
+  // 원시 센서 값
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null)
-  
-  // ▶ 실제 경로 진행 상태
+  // 스무딩된 헤딩
+  const [smoothedHeading, setSmoothedHeading] = useState<number | null>(null)
+  const lastSmoothedHeadingRef = useRef<number | null>(null)
+
   const [routeProgress, setRouteProgress] = useState<NavigationProgress | null>(null)
 
   const [navigationState, setNavigationState] = useState<NavigationState>({
@@ -56,8 +72,6 @@ export default function FullScreenNavigation({
     estimatedTime: 12
   })
 
-  // (선택) iOS에서 쓰려면, 버튼 클릭 등 사용자 제스처 안에서 호출해서 권한 요청
-  // export 해서 상위에서 불러도 되고, 이 컴포넌트 안에서 버튼 하나 만들어도 됨.
   const requestDeviceOrientationPermission = async () => {
     if (typeof window === 'undefined') return
     const AnyDeviceOrientationEvent = (window as any).DeviceOrientationEvent
@@ -96,7 +110,6 @@ export default function FullScreenNavigation({
       const newMap = new kakao.maps.Map(mapContainer.current, mapOption)
       setMap(newMap)
 
-      // 현재 위치 마커
       if (currentPosition) {
         const marker = new kakao.maps.Marker({
           position: new kakao.maps.LatLng(currentPosition.lat, currentPosition.lng),
@@ -105,7 +118,6 @@ export default function FullScreenNavigation({
         setCurrentMarker(marker)
       }
 
-      // 경로 폴리라인
       if (courseRoute.length > 0) {
         const path = courseRoute.map(
           (point) => new kakao.maps.LatLng(point.lat, point.lng)
@@ -129,46 +141,64 @@ export default function FullScreenNavigation({
     initializeMap()
   }, [isActive, currentPosition, courseRoute, map])
 
-  // ▶ 휴대폰 기울기/방향에 맞춰 헤딩 업데이트 (DeviceOrientation)
+  // DeviceOrientation → heading smoothing + dead zone
   useEffect(() => {
     if (!isActive) return
 
     const handleOrientation = (event: DeviceOrientationEvent) => {
-      // iOS Safari: webkitCompassHeading
       const anyEvent = event as any
-      let heading: number | null = null
+      let rawHeading: number | null = null
 
       if (typeof anyEvent.webkitCompassHeading === 'number') {
-        heading = anyEvent.webkitCompassHeading as number
+        rawHeading = anyEvent.webkitCompassHeading as number
       } else if (typeof event.alpha === 'number') {
-        // alpha: 0~360, 디바이스 기준 → 대략적인 북쪽 기준 헤딩으로 변환
-        heading = 360 - event.alpha
+        rawHeading = 360 - event.alpha
       }
 
-      if (heading != null && Number.isFinite(heading)) {
-        setDeviceHeading(heading)
+      if (rawHeading == null || !Number.isFinite(rawHeading)) return
+
+      const normalizedRaw = normalizeAngle(rawHeading)
+      setDeviceHeading(normalizedRaw)
+
+      const last = lastSmoothedHeadingRef.current
+      if (last == null) {
+        lastSmoothedHeadingRef.current = normalizedRaw
+        setSmoothedHeading(normalizedRaw)
+        return
       }
+
+      const diff = shortestAngleDiff(last, normalizedRaw)
+
+      // dead zone: 작은 변화는 무시
+      if (Math.abs(diff) < DEAD_ZONE_DEG) {
+        return
+      }
+
+      // smoothing: 이전 값에서 천천히 따라가기
+      const next = normalizeAngle(last + diff * SMOOTHING_FACTOR)
+      lastSmoothedHeadingRef.current = next
+      setSmoothedHeading(next)
     }
 
     window.addEventListener('deviceorientation', handleOrientation, true)
-
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation, true)
     }
   }, [isActive])
 
-  // ▶ 실제 회전은 deviceHeading 기준으로 처리 (폰이 보는 방향이 정면)
+  // 지도 회전 (스무딩된 heading 기준)
   useEffect(() => {
     if (!isActive || !mapContainer.current) return
-    if (deviceHeading == null) return
+    const heading = smoothedHeading ?? deviceHeading
+    if (heading == null) return
 
-    const rotation = -deviceHeading
+    const rotation = -heading
     mapContainer.current.style.transform = `rotate(${rotation}deg)`
     mapContainer.current.style.transformOrigin = 'center center'
-    mapContainer.current.style.transition = 'transform 0.3s ease-out'
-  }, [isActive, deviceHeading])
+    mapContainer.current.style.transition = `transform ${ROTATION_TRANSITION_MS}ms ease-out`
+  }, [isActive, smoothedHeading, deviceHeading])
 
-  // GPS 추적 시작 (위치 + 속도만 담당, 회전은 deviceHeading에 위임)
+  // GPS 추적
   useEffect(() => {
     if (!isActive || !map) return
 
@@ -187,21 +217,16 @@ export default function FullScreenNavigation({
 
         const kakao = (window as any).kakao
 
-        // 지도 중심 이동
         map.setCenter(new kakao.maps.LatLng(newPos.lat, newPos.lng))
 
-        // 마커 업데이트
         if (currentMarker) {
           currentMarker.setPosition(new kakao.maps.LatLng(newPos.lat, newPos.lng))
         }
 
-        // 속도 계산
         const speed = (position.coords.speed || 0) * 3.6 // m/s → km/h
 
-        // ▶ 실제 경로 진행률 계산
         let progress: NavigationProgress | null = null
         if (courseRoute.length > 1) {
-          // GPSCoordinate를 RoutePoint로 변환
           const routePoints = courseRoute.map((point, index) => ({
             lat: point.lat,
             lng: point.lng,
@@ -211,19 +236,17 @@ export default function FullScreenNavigation({
           setRouteProgress(progress)
         }
 
-        // ▶ 다음 웨이포인트 계산
-        let nextTurnDistance = 500 // 기본값
+        let nextTurnDistance = 500
         let nextTurnDirection = '직진하세요'
-        
+
+        const headingForDir = smoothedHeading ?? deviceHeading ?? 0
+
         if (progress && progress.nextWaypoint) {
           nextTurnDistance = Math.round(haversineDistance(newPos, progress.nextWaypoint))
-          
-          // 방향 계산
+
           const bearing = calculateBearing(newPos, progress.nextWaypoint)
-          const currentHeading = deviceHeading || 0
-          const relativeBearing = (bearing - currentHeading + 360) % 360
-          
-          // 방향 안내 텍스트
+          const relativeBearing = (bearing - headingForDir + 360) % 360
+
           if (relativeBearing < 30 || relativeBearing > 330) {
             nextTurnDirection = '직진하세요'
           } else if (relativeBearing >= 30 && relativeBearing < 150) {
@@ -235,32 +258,26 @@ export default function FullScreenNavigation({
           }
         }
 
-        // ▶ 코스 이탈 체크
         if (progress && progress.isOffRoute) {
           nextTurnDirection = '코스로 돌아가세요'
         }
 
-        // ▶ 예상 완주 시간 계산
-        let estimatedTime = 12 // 기본값
+        let estimatedTime = 12
         if (progress && speed > 0) {
           const remainingKm = progress.remainingDistance / 1000
-          estimatedTime = Math.round((remainingKm / speed) * 60) // 분 단위
+          estimatedTime = Math.round((remainingKm / speed) * 60)
         }
 
         setNavigationState((prev) => ({
           ...prev,
           currentSpeed: speed,
-          currentBearing:
-            deviceHeading != null && Number.isFinite(deviceHeading)
-              ? deviceHeading
-              : prev.currentBearing,
+          currentBearing: headingForDir,
           nextTurnDistance,
           nextTurnDirection,
           remainingDistance: progress ? progress.remainingDistance : prev.remainingDistance,
           estimatedTime
         }))
 
-        // 위치 업데이트 콜백
         if (onLocationUpdate) {
           onLocationUpdate(newPos)
         }
@@ -269,13 +286,16 @@ export default function FullScreenNavigation({
           '📍 네비게이션 위치 업데이트:',
           newPos,
           `속도: ${speed.toFixed(1)}km/h`,
-          `heading(device): ${deviceHeading}`,
-          progress ? {
-            진행률: `${(progress.progressRatio * 100).toFixed(1)}%`,
-            남은거리: `${(progress.remainingDistance / 1000).toFixed(2)}km`,
-            코스이탈: progress.isOffRoute ? '예' : '아니오',
-            다음턴: `${nextTurnDistance}m ${nextTurnDirection}`
-          } : '경로 계산 중...'
+          `heading(raw): ${deviceHeading}`,
+          `heading(smooth): ${smoothedHeading}`,
+          progress
+            ? {
+                진행률: `${(progress.progressRatio * 100).toFixed(1)}%`,
+                남은거리: `${(progress.remainingDistance / 1000).toFixed(2)}km`,
+                코스이탈: progress.isOffRoute ? '예' : '아니오',
+                다음턴: `${nextTurnDistance}m ${nextTurnDirection}`
+              }
+            : '경로 계산 중...'
         )
       },
       (error) => {
@@ -291,16 +311,14 @@ export default function FullScreenNavigation({
         navigator.geolocation.clearWatch(newWatchId)
       }
     }
-  }, [isActive, map, currentMarker, onLocationUpdate, deviceHeading])
+  }, [isActive, map, currentMarker, onLocationUpdate, courseRoute, deviceHeading, smoothedHeading])
 
-  // 네비게이션 종료
   const handleClose = useCallback(() => {
     if (watchId) {
       navigator.geolocation.clearWatch(watchId)
       setWatchId(null)
     }
 
-    // 지도 회전 초기화
     if (mapContainer.current) {
       mapContainer.current.style.transform = 'none'
     }
@@ -321,7 +339,6 @@ export default function FullScreenNavigation({
         {/* 상단 네비게이션 안내 바 */}
         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent">
           <div className="p-4 pt-12">
-            {/* 다음 안내 */}
             <div className="bg-blue-600 rounded-2xl p-4 mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
@@ -350,7 +367,6 @@ export default function FullScreenNavigation({
               </div>
             </div>
 
-            {/* 진행 정보 */}
             <div className="flex items-center justify-between text-white text-sm">
               <div className="flex items-center gap-4">
                 <div>
@@ -389,7 +405,6 @@ export default function FullScreenNavigation({
         <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent">
           <div className="p-4 pb-8">
             <div className="flex items-center justify-between">
-              {/* 네비게이션 종료 버튼 */}
               <button
                 onClick={handleClose}
                 className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors"
@@ -397,17 +412,11 @@ export default function FullScreenNavigation({
                 네비게이션 종료
               </button>
 
-              {/* 중앙 정보 */}
               <div className="flex-1 text-center">
-                <div className="text-white text-lg font-semibold">
-                  런닝 네비게이션
-                </div>
-                <div className="text-gray-300 text-sm">
-                  목적지까지 안내 중
-                </div>
+                <div className="text-white text-lg font-semibold">런닝 네비게이션</div>
+                <div className="text-gray-300 text-sm">목적지까지 안내 중</div>
               </div>
 
-              {/* 설정 / 센서 활성화 버튼 예시 */}
               <button
                 className="bg-gray-700 hover:bg-gray-600 text-white p-3 rounded-xl transition-colors"
                 onClick={requestDeviceOrientationPermission}
