@@ -307,24 +307,27 @@ export default function FullScreenNavigation({
     setWatchId(newWatchId)
 
     return () => {
+      // 컴포넌트가 완전히 언마운트될 때만 GPS 정리
+      // (isActive가 false가 되어 useEffect가 재실행될 때)
       if (newWatchId) {
         navigator.geolocation.clearWatch(newWatchId)
+        setWatchId(null)
       }
     }
   }, [isActive, map, currentMarker, onLocationUpdate, courseRoute, deviceHeading, smoothedHeading])
 
   const handleClose = useCallback(() => {
-    if (watchId) {
-      navigator.geolocation.clearWatch(watchId)
-      setWatchId(null)
-    }
-
+    // GPS 추적은 중단하지 않음 - 런닝은 계속되어야 함
+    // GPS watchId는 부모 컴포넌트에서 관리하도록 유지
+    
+    // 지도 회전만 초기화
     if (mapContainer.current) {
       mapContainer.current.style.transform = 'none'
     }
 
+    // 네비게이션 모드만 종료하고 이전 페이지로 이동
     onClose()
-  }, [watchId, onClose])
+  }, [onClose])
 
   if (!isActive) return null
 
