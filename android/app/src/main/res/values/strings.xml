@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RunSpot</string>
+    <string name="title_activity_main">RunSpot</string>
+    <string name="package_name">com.runspot.app</string>
+    <string name="custom_url_scheme">com.runspot.app</string>
+</resources>

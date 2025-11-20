@@ -2,8 +2,22 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import RunningMap from '@/components/common/RunningMap'
+import dynamic from 'next/dynamic'
+import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
 import NavigationGuide from '@/components/common/NavigationGuide'
+
+// RunningMap을 dynamic import로 처리
+const RunningMap = dynamic(() => import('@/components/common/RunningMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 bg-gray-900 rounded-2xl flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
+        <p className="text-gray-400 text-sm">지도 로딩 중...</p>
+      </div>
+    </div>
+  )
+})
 import { useRunningSession } from '@/hooks/useRunningSession'
 import { useRunningStore } from '@/stores/runningStore'
 import { 
@@ -314,7 +328,8 @@ function RunningStartContent() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <KakaoMapWrapper>
+      <div className="min-h-screen bg-black text-white">
       {/* 헤더 */}
       <RunningHeader
         courseName={course.name}
@@ -428,7 +443,8 @@ function RunningStartContent() {
         />
 
       </div>
-    </div>
+      </div>
+    </KakaoMapWrapper>
   )
 }
 

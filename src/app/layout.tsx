@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import KakaoScript from "@/components/common/KakaoScript";
+import AppInitializer from "@/components/common/AppInitializer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,9 +31,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const kakaoApiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY || ''
-  console.log('🔧 Layout에서 Kakao API 키 확인:', kakaoApiKey ? `${kakaoApiKey.substring(0, 10)}...` : '없음')
-  
   return (
     <html lang="ko" className="dark">
       <head>
@@ -47,9 +44,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <KakaoScript apiKey={kakaoApiKey}>
+        <AppInitializer>
           {children}
-        </KakaoScript>
+        </AppInitializer>
       </body>
     </html>
   );

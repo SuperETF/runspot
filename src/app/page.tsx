@@ -2,8 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Search, MapPin, Play, Bookmark, User, Navigation, Clock, Home as HomeIcon, Store, Mail, X } from 'lucide-react'
-import KakaoMap from '@/components/common/KakaoMap'
+import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
+
+// KakaoMap을 dynamic import로 처리
+const KakaoMap = dynamic(() => import('@/components/common/KakaoMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-64 bg-gray-900 rounded-2xl flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
+        <p className="text-gray-400 text-sm">지도 로딩 중...</p>
+      </div>
+    </div>
+  )
+})
 import CoursePolyline from '@/components/common/CoursePolyline'
 import CourseMarker from '@/components/common/CourseMarker'
 import CourseMarkerIcon from '@/components/common/CourseMarkerIcon'
@@ -390,7 +404,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-x-hidden">
+    <KakaoMapWrapper>
+      <div className="min-h-screen bg-black text-white overflow-x-hidden">
       {/* 인증 가능 알림 배너 */}
       {userProfile?.id && (
         <AuthenticationBanner userId={userProfile.id} />
@@ -708,6 +723,7 @@ export default function Home() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </KakaoMapWrapper>
   )
 }

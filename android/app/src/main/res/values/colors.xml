@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#00FF88</color>
+    <color name="colorPrimaryDark">#00E077</color>
+    <color name="colorAccent">#00FF88</color>
+    
+    <!-- 스플래시 화면 색상 -->
+    <color name="splash_background">#000000</color>
+    <color name="splash_text">#00FF88</color>
+</resources>

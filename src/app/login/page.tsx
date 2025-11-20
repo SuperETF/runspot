@@ -102,6 +102,7 @@ export default function LoginPage() {
   const handleGuestLogin = () => {
     // 게스트로 계속하기 - 로컬 스토리지에 게스트 플래그 설정
     localStorage.setItem('runspot_guest_mode', 'true')
+    // 홈 화면으로 이동
     router.push('/')
   }
 
