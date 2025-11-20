@@ -87,24 +87,32 @@ const KakaoMap = ({
       if (typeof window !== 'undefined' && (window as any).kakao && (window as any).kakao.maps) {
         console.log('✅ Kakao 객체 발견됨')
         
-        // LatLng 생성자가 사용 가능한지 확인
-        if ((window as any).kakao.maps.LatLng) {
+        // LatLng, Map 생성자가 모두 사용 가능한지 확인
+        const kakaoMaps = (window as any).kakao.maps
+        if (kakaoMaps.LatLng && kakaoMaps.Map) {
           console.log('✅ Kakao Maps SDK 완전히 로드됨')
           setIsKakaoLoaded(true)
           setLoadError(null)
         } else {
-          console.log('⏳ SDK 로드됨, 초기화 중...')
-          // SDK는 로드되었지만 초기화되지 않은 경우
-          try {
-            (window as any).kakao.maps.load(() => {
-              console.log('✅ Kakao Maps 초기화 완료')
+          console.log('⏳ SDK 로드됨, 라이브러리 초기화 대기 중...')
+          
+          // 100ms마다 체크 (최대 3초)
+          let attempts = 0
+          const maxAttempts = 30
+          
+          const checkInterval = setInterval(() => {
+            attempts++
+            if (kakaoMaps.LatLng && kakaoMaps.Map) {
+              console.log('✅ Kakao Maps 라이브러리 완전 로드됨')
+              clearInterval(checkInterval)
               setIsKakaoLoaded(true)
               setLoadError(null)
-            })
-          } catch (error) {
-            console.error('❌ Kakao Maps 초기화 실패:', error)
-            setLoadError('Kakao Maps 초기화에 실패했습니다.')
-          }
+            } else if (attempts >= maxAttempts) {
+              console.error('❌ Kakao Maps 라이브러리 로딩 타임아웃')
+              clearInterval(checkInterval)
+              setLoadError('Kakao Maps 라이브러리 로딩 타임아웃')
+            }
+          }, 100)
         }
       } else {
         console.log('⏳ Kakao Maps SDK 대기 중... (100ms 후 재시도)')

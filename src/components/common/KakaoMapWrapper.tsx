@@ -8,9 +8,7 @@ interface KakaoMapWrapperProps {
 }
 
 export default function KakaoMapWrapper({ children }: KakaoMapWrapperProps) {
-  const [isLoaded, setIsLoaded] = useState(false)
   const [apiKey, setApiKey] = useState('')
-  const [loadTimeout, setLoadTimeout] = useState(false)
 
   useEffect(() => {
     // 클라이언트 사이드에서만 실행
@@ -18,43 +16,54 @@ export default function KakaoMapWrapper({ children }: KakaoMapWrapperProps) {
     
     // 환경변수에서 API 키 가져오기
     const key = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY || ''
+    
+    console.log('🔑 환경변수 상태:', {
+      hasKey: !!key,
+      keyLength: key.length,
+      keyPreview: key ? `${key.substring(0, 10)}...` : '없음',
+      allEnvKeys: Object.keys(process.env).filter(k => k.includes('KAKAO'))
+    })
+    
     setApiKey(key)
     
-    // 이미 카카오맵 SDK가 로드되어 있는지 확인
-    if ((window as any).kakao?.maps) {
-      console.log('✅ Kakao Maps SDK 이미 로드됨')
-      setIsLoaded(true)
-      return
+    if (key) {
+      console.log('🚀 카카오맵 SDK 백그라운드 로딩 - 앱 바로 진입')
+    } else {
+      console.warn('⚠️ 카카오맵 API 키가 없어서 지도 기능 비활성화')
     }
-
-    // 10초 후 타임아웃 - 로딩이 너무 오래 걸리면 children 렌더링
-    const timeout = setTimeout(() => {
-      console.warn('⚠️ 카카오맵 로딩 타임아웃 - children 렌더링')
-      setLoadTimeout(true)
-      setIsLoaded(true)
-    }, 10000)
-
-    return () => clearTimeout(timeout)
   }, [])
 
   const handleLoad = () => {
-    console.log('✅ Kakao Maps SDK 로드 완료')
+    console.log('✅ Kakao Maps SDK 스크립트 로드 완료 (autoload=false)')
     
-    // 카카오맵 라이브러리 수동 로드
-    if ((window as any).kakao?.maps?.load) {
-      (window as any).kakao.maps.load(() => {
-        console.log('✅ Kakao Maps 라이브러리 초기화 완료')
-        setIsLoaded(true)
+    const kakao = (window as any).kakao
+    if (kakao?.maps?.load) {
+      console.log('🔄 카카오맵 라이브러리 수동 초기화 시작')
+      
+      // 수동으로 카카오맵 라이브러리 로드
+      kakao.maps.load(() => {
+        console.log('🎉 카카오맵 라이브러리 초기화 완료!')
+        console.log('🔍 최종 Kakao 객체 상태:', {
+          kakao: !!kakao,
+          maps: !!kakao?.maps,
+          LatLng: !!kakao?.maps?.LatLng,
+          Map: !!kakao?.maps?.Map,
+          ready: !!(kakao?.maps?.LatLng && kakao?.maps?.Map)
+        })
       })
     } else {
-      setIsLoaded(true)
+      console.error('❌ kakao.maps.load 함수를 찾을 수 없습니다')
+      console.log('🔍 Kakao 객체 상태:', {
+        kakao: !!kakao,
+        maps: !!kakao?.maps,
+        load: !!kakao?.maps?.load
+      })
     }
   }
 
   const handleError = (e: any) => {
     console.error('❌ Kakao Maps SDK 로드 실패:', e)
     console.log('🔄 지도 없이 앱 계속 실행')
-    setIsLoaded(true) // 오류가 있어도 앱은 계속 실행
   }
 
   // 서버사이드에서는 바로 children 렌더링
@@ -70,27 +79,19 @@ export default function KakaoMapWrapper({ children }: KakaoMapWrapperProps) {
 
   return (
     <>
-      {!isLoaded && (
+      {/* API 키가 있을 때만 카카오맵 SDK 로딩 */}
+      {apiKey && (
         <Script
           id="kakao-maps-sdk"
           src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false&libraries=services`}
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
           onLoad={handleLoad}
           onError={handleError}
         />
       )}
       
-      {/* 카카오맵 SDK 로드 완료 후 또는 이미 로드된 경우 children 렌더링 */}
-      {isLoaded ? children : (
-        <div className="min-h-screen bg-black flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-[#00FF88] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <h2 className="text-xl font-bold text-[#00FF88] mb-2">RunSpot</h2>
-            <p className="text-gray-400">지도 기능을 준비하고 있습니다...</p>
-            <p className="text-gray-500 text-sm mt-2">10초 후 자동으로 계속됩니다</p>
-          </div>
-        </div>
-      )}
+      {/* 바로 children 렌더링 - 카카오맵이 자체적으로 로딩 처리 */}
+      {children}
     </>
   )
 }
