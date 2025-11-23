@@ -107,12 +107,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 flex flex-col justify-center">
+    <div className="min-h-screen bg-background text-foreground px-4 flex flex-col justify-center">
       <div className="w-full max-w-sm mx-auto">
         {/* 로고 */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-[#00FF88] mb-3">RunSpot</h1>
-          <p className="text-gray-400 text-lg">서울의 러닝 코스를 발견하세요</p>
+          <h1 className="text-5xl font-bold text-primary mb-3">RunSpot</h1>
+          <p className="text-muted-foreground text-lg">서울의 러닝 코스를 발견하세요</p>
         </div>
 
         {/* 폼 */}
@@ -123,7 +123,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-4 bg-gray-900 border-2 border-gray-700 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-[#00FF88] transition-colors text-lg"
+            className="w-full px-4 py-4 bg-background border-2 border-border rounded-2xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors text-lg"
             placeholder="이메일"
             required
           />
@@ -135,7 +135,7 @@ export default function LoginPage() {
             type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-4 bg-gray-900 border-2 border-gray-700 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-[#00FF88] transition-colors text-lg pr-12"
+            className="w-full px-4 py-4 bg-background border-2 border-border rounded-2xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors text-lg pr-12"
             placeholder="비밀번호"
             required
             minLength={6}
@@ -143,7 +143,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             {showPassword ? <EyeOff className="w-6 h-6" /> : <Eye className="w-6 h-6" />}
           </button>
@@ -151,7 +151,7 @@ export default function LoginPage() {
 
         {/* 에러 메시지 */}
         {error && (
-          <div className="text-red-400 text-center bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
+          <div className="text-red-600 text-center bg-red-50 border border-red-200 rounded-2xl p-4">
             {error}
           </div>
         )}
@@ -160,7 +160,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#00FF88] text-black font-bold py-4 rounded-2xl hover:bg-[#00E077] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+          className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-2xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
         >
           {loading ? (
             <>
@@ -177,7 +177,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGuestLogin}
-              className="text-gray-400 hover:text-white transition-colors text-lg font-medium inline-block"
+              className="text-muted-foreground hover:text-foreground transition-colors text-lg font-medium inline-block"
             >
               게스트로 계속하기
             </button>
@@ -186,11 +186,11 @@ export default function LoginPage() {
 
         {/* 회원가입 링크 */}
         <div className="text-center mt-8 max-w-sm mx-auto">
-          <p className="text-gray-400">
+          <p className="text-muted-foreground">
             계정이 없으신가요?{' '}
             <button
               onClick={() => router.push('/signup')}
-              className="text-[#00FF88] hover:text-[#00E077] font-medium transition-colors"
+              className="text-primary hover:text-primary/80 font-medium transition-colors"
             >
               회원가입
             </button>
@@ -198,37 +198,37 @@ export default function LoginPage() {
         </div>
 
         {/* 하단 정보 */}
-        <div className="text-center mt-8 text-gray-500 text-sm">
+        <div className="text-center mt-8 text-muted-foreground/70 text-sm">
           <p>계정을 생성하면 서비스 약관 및 개인정보 처리방침에 동의하게 됩니다.</p>
         </div>
       </div>
 
       {/* 회원가입 완료 안내 모달 */}
       {showSignupMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-gray-900 rounded-3xl w-full max-w-sm border border-gray-800 shadow-2xl animate-fade-in-up relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm px-4">
+          <div className="bg-card rounded-3xl w-full max-w-sm border border-border shadow-2xl animate-fade-in-up relative">
             {/* 닫기 버튼 */}
             <button
               onClick={() => setShowSignupMessage(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors"
+              className="absolute top-4 right-4 p-2 hover:bg-muted rounded-xl transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
             
             <div className="p-6 text-center">
               {/* 아이콘 */}
               <div className="mb-4">
-                <Mail className="w-16 h-16 text-[#00FF88] mx-auto" />
+                <Mail className="w-16 h-16 text-primary mx-auto" />
               </div>
 
               {/* 제목 */}
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-xl font-bold text-foreground mb-2">
                 회원가입이 완료되었습니다!
               </h3>
 
               {/* 메시지 */}
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                <span className="text-[#00FF88] font-medium">{signupEmail}</span>로<br />
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                <span className="text-primary font-medium">{signupEmail}</span>로<br />
                 인증 이메일이 전송됩니다.<br />
                 인증 후 로그인이 가능합니다.
               </p>
@@ -236,7 +236,7 @@ export default function LoginPage() {
               {/* 확인 버튼 */}
               <button
                 onClick={() => setShowSignupMessage(false)}
-                className="w-full bg-[#00FF88] text-black font-semibold py-3 rounded-2xl hover:bg-[#00E077] transition-colors"
+                className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-2xl hover:bg-primary/90 transition-colors"
               >
                 확인
               </button>

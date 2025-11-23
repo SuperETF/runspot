@@ -29,13 +29,13 @@ export default function FriendsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 헤더 */}
-      <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800">
+      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -44,13 +44,13 @@ export default function FriendsPage() {
         </div>
 
         {/* 탭 네비게이션 */}
-        <div className="flex border-b border-gray-800">
+        <div className="flex border-b border-border">
           <button
             onClick={() => setActiveTab('friends')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'friends'
-                ? 'text-[#00FF88] border-b-2 border-[#00FF88]'
-                : 'text-gray-400 hover:text-white'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             친구 목록
@@ -59,8 +59,8 @@ export default function FriendsPage() {
             onClick={() => setActiveTab('settings')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               activeTab === 'settings'
-                ? 'text-[#00FF88] border-b-2 border-[#00FF88]'
-                : 'text-gray-400 hover:text-white'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             위치 공유 설정

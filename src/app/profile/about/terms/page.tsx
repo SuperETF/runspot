@@ -7,13 +7,13 @@ export default function TermsPage() {
   const router = useRouter()
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 상단 헤더 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+            className="p-2 hover:bg-muted rounded-xl transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -23,25 +23,25 @@ export default function TermsPage() {
       </div>
 
       <div className="px-4 py-6 space-y-6">
-        <div className="bg-gray-900/80 glass rounded-2xl p-6 border border-gray-800">
-          <h2 className="text-xl font-bold text-white mb-6">서비스 이용약관</h2>
+        <div className="bg-card/80 glass rounded-2xl p-6 border border-border">
+          <h2 className="text-xl font-bold text-foreground mb-6">서비스 이용약관</h2>
           
-          <div className="space-y-6 text-gray-300 leading-relaxed">
+          <div className="space-y-6 text-foreground/80 leading-relaxed">
             <div>
-              <p className="mb-4 text-sm text-gray-400">
+              <p className="mb-4 text-sm text-muted-foreground">
                 시행일자: 2025년 1월 1일 | 최종 수정일: 2024년 12월 1일
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제1조 (목적)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제1조 (목적)</h3>
               <p className="mb-4">
                 이 약관은 RunSpot Seoul(이하 "회사")이 제공하는 런닝 코스 플랫폼 서비스(이하 "서비스")의 이용조건 및 절차, 회사와 이용자의 권리, 의무, 책임사항과 기타 필요한 사항을 규정함을 목적으로 합니다.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제2조 (정의)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제2조 (정의)</h3>
               <p className="mb-4">이 약관에서 사용하는 용어의 정의는 다음과 같습니다:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>"서비스"라 함은 회사가 제공하는 런닝 코스 정보, GPS 추적, 커뮤니티 기능 등 모든 서비스를 의미합니다.</li>
@@ -52,7 +52,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제3조 (약관의 효력 및 변경)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제3조 (약관의 효력 및 변경)</h3>
               <p className="mb-4">
                 이 약관은 서비스를 이용하고자 하는 모든 이용자에 대하여 그 효력을 발생합니다.
               </p>
@@ -62,7 +62,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제4조 (서비스의 제공 및 변경)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제4조 (서비스의 제공 및 변경)</h3>
               <p className="mb-4">회사는 다음과 같은 서비스를 제공합니다:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>런닝 코스 정보 제공 및 검색 서비스</li>
@@ -78,7 +78,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제5조 (회원가입)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제5조 (회원가입)</h3>
               <p className="mb-4">
                 이용자는 회사가 정한 가입 양식에 따라 회원정보를 기입한 후 이 약관에 동의한다는 의사표시를 함으로서 회원가입을 신청합니다.
               </p>
@@ -93,7 +93,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제6조 (회원정보의 변경)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제6조 (회원정보의 변경)</h3>
               <p className="mb-4">
                 회원은 개인정보관리화면을 통하여 언제든지 본인의 개인정보를 열람하고 수정할 수 있습니다.
               </p>
@@ -103,14 +103,14 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제7조 (개인정보보호 의무)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제7조 (개인정보보호 의무)</h3>
               <p className="mb-4">
                 회사는 관련법령이 정하는 바에 따라서 회원 등록정보를 포함한 회원의 개인정보를 보호하기 위하여 노력합니다. 회원의 개인정보보호에 관해서는 관련법령 및 회사가 정하는 개인정보처리방침에 정한 바에 의합니다.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제8조 (이용자의 의무)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제8조 (이용자의 의무)</h3>
               <p className="mb-4">이용자는 다음 행위를 하여서는 안됩니다:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>신청 또는 변경시 허위내용의 등록</li>
@@ -125,7 +125,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제9조 (저작권의 귀속 및 이용제한)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제9조 (저작권의 귀속 및 이용제한)</h3>
               <p className="mb-4">
                 회사가 작성한 저작물에 대한 저작권 기타 지적재산권은 회사에 귀속합니다.
               </p>
@@ -135,7 +135,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제10조 (데이터 수집 및 활용)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제10조 (데이터 수집 및 활용)</h3>
               <p className="mb-4">
                 회사는 서비스 제공 및 개선을 위하여 다음과 같은 데이터를 수집하고 활용할 수 있습니다:
               </p>
@@ -158,7 +158,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제11조 (서비스 이용의 제한)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제11조 (서비스 이용의 제한)</h3>
               <p className="mb-4">
                 회사는 이용자가 다음 각 호에 해당하는 경우 사전통지 없이 서비스 이용을 제한하거나 중단할 수 있습니다:
               </p>
@@ -171,7 +171,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제12조 (면책조항)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제12조 (면책조항)</h3>
               <p className="mb-4">
                 회사는 천재지변 또는 이에 준하는 불가항력으로 인하여 서비스를 제공할 수 없는 경우에는 서비스 제공에 관한 책임이 면제됩니다.
               </p>
@@ -187,21 +187,21 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제13조 (준거법 및 관할법원)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제13조 (준거법 및 관할법원)</h3>
               <p className="mb-4">
                 이 약관의 해석 및 회사와 이용자간의 분쟁에 대하여는 대한민국의 법을 적용하며, 서비스 이용으로 발생한 분쟁에 대해 소송이 제기되는 경우 민사소송법상의 관할법원에 제기합니다.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">제14조 (기타)</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">제14조 (기타)</h3>
               <p className="mb-4">
                 이 약관에서 정하지 아니한 사항과 이 약관의 해석에 관하여는 전자상거래 등에서의 소비자보호에 관한 법률, 약관의 규제 등에 관한 법률, 공정거래위원회가 정하는 전자상거래 등에서의 소비자 보호지침 및 관계법령 또는 상관례에 따릅니다.
               </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">부칙</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-3">부칙</h3>
               <p className="mb-4">
                 이 약관은 2025년 1월 1일부터 적용됩니다.
               </p>

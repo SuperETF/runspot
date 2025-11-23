@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { Map, MapMarker, Polyline } from 'react-kakao-maps-sdk'
-import { GPSCoordinate } from '@/types/database'
+import { GPSCoordinate, FriendLocationData } from '@/types/database'
 import { MapPin, Navigation } from 'lucide-react'
 import CourseMarkerIcon from './CourseMarkerIcon'
+import FriendLocationMarker from '@/components/friends/FriendLocationMarker'
 import { getRunSpotLogoBase64, createRunSpotMarkerSvg } from '@/utils/imageUtils'
 
 interface KakaoMapProps {
@@ -24,6 +25,8 @@ interface KakaoMapProps {
   showUserLocation?: boolean
   courses?: any[]
   onCourseClick?: (course: any) => void
+  friendsLocations?: FriendLocationData[]
+  showFriendsOnMap?: boolean
 }
 
 const KakaoMap = ({
@@ -41,7 +44,9 @@ const KakaoMap = ({
   locationAccuracy,
   showUserLocation = true,
   courses = [],
-  onCourseClick
+  onCourseClick,
+  friendsLocations = [],
+  showFriendsOnMap = true
 }: KakaoMapProps) => {
   const [isKakaoLoaded, setIsKakaoLoaded] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -266,6 +271,68 @@ const KakaoMap = ({
                 src: getCourseMarkerSrc(),
                 size: { width: 48, height: 48 },
                 options: { offset: { x: 24, y: 48 } }
+              }}
+            />
+          )
+        })}
+
+        {/* 친구 위치 마커들 */}
+        {showFriendsOnMap && friendsLocations.map((friendData, index) => {
+          const position = {
+            lat: friendData.location.latitude,
+            lng: friendData.location.longitude
+          }
+
+          // 친구 아바타 이미지 또는 기본 마커 생성
+          const getFriendMarkerImage = () => {
+            if (friendData.friend.profile_image) {
+              return {
+                src: friendData.friend.profile_image,
+                size: { width: 40, height: 40 },
+                options: { offset: { x: 20, y: 40 } }
+              }
+            }
+            // 기본 친구 마커 (초록색 원)
+            const canvas = document.createElement('canvas')
+            canvas.width = 40
+            canvas.height = 40
+            const ctx = canvas.getContext('2d')
+            if (ctx) {
+              // 배경 원
+              ctx.fillStyle = friendData.is_running ? '#00FF88' : '#6B7280'
+              ctx.beginPath()
+              ctx.arc(20, 20, 18, 0, 2 * Math.PI)
+              ctx.fill()
+              
+              // 테두리
+              ctx.strokeStyle = friendData.is_running ? '#00E077' : '#4B5563'
+              ctx.lineWidth = 3
+              ctx.stroke()
+              
+              // 이름 첫 글자
+              ctx.fillStyle = 'white'
+              ctx.font = 'bold 14px Arial'
+              ctx.textAlign = 'center'
+              ctx.textBaseline = 'middle'
+              ctx.fillText(friendData.friend.name.charAt(0).toUpperCase(), 20, 20)
+            }
+            
+            return {
+              src: canvas.toDataURL(),
+              size: { width: 40, height: 40 },
+              options: { offset: { x: 20, y: 40 } }
+            }
+          }
+
+          return (
+            <MapMarker
+              key={`friend-${friendData.friend.id}-${index}`}
+              position={position}
+              title={`${friendData.friend.name} ${friendData.is_running ? '(런닝 중)' : ''}`}
+              image={getFriendMarkerImage()}
+              onClick={() => {
+                console.log('친구 마커 클릭:', friendData.friend.name)
+                // 여기에 친구 정보 팝업 로직 추가 가능
               }}
             />
           )

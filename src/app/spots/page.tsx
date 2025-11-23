@@ -667,8 +667,8 @@ export default function SpotsPage() {
                       }}
                       className={`font-medium py-2 px-4 rounded-xl transition-colors text-sm ${
                         getSpotAuthStatus(spot.id) === 'active'
-                          ? 'bg-muted/70 text-foreground cursor-default'
-                          : 'bg-card hover:bg-muted text-black'
+                          ? 'bg-green-100 text-green-800 cursor-default border border-green-200'
+                          : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                       }`}
                     >
                       {getButtonText(spot.id)}
@@ -869,8 +869,8 @@ export default function SpotsPage() {
                 }}
                 className={`w-full font-bold py-3 px-4 rounded-xl transition-colors ${
                   getSpotAuthStatus(detailSpot.id) === 'active'
-                    ? 'bg-muted/70 text-foreground cursor-default'
-                    : 'bg-primary hover:bg-primary/90 text-black'
+                    ? 'bg-green-100 text-green-800 cursor-default border border-green-200'
+                    : 'bg-primary hover:bg-primary/90 text-primary-foreground'
                 }`}
               >
                 {getSpotAuthStatus(detailSpot.id) === 'active' ? '인증 완료' : '완주 인증하기'}

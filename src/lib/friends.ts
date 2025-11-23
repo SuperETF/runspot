@@ -446,8 +446,11 @@ export const getFriendsLocations = async (userLocation?: { lat: number; lng: num
   try {
     const currentUser = await getCurrentUser()
     if (!currentUser) {
+      console.log('getFriendsLocations: 로그인되지 않은 사용자')
       return { success: false, error: '로그인이 필요합니다.' }
     }
+
+    console.log('getFriendsLocations: 현재 사용자 ID:', currentUser.id)
 
     // 친구 목록과 최신 위치 정보 조회
     const { data, error } = await supabase
@@ -466,14 +469,19 @@ export const getFriendsLocations = async (userLocation?: { lat: number; lng: num
       return { success: false, error: '친구 목록을 불러오는데 실패했습니다.' }
     }
 
+    console.log('getFriendsLocations: 친구 관계 조회 결과:', data?.length || 0, '개')
+
     // 친구들의 ID 추출
-    const friendIds = data.map((friendship: any) => {
+    const friendIds = data?.map((friendship: any) => {
       return friendship.requester_id === currentUser.id 
         ? friendship.addressee_id 
         : friendship.requester_id
-    })
+    }) || []
+
+    console.log('getFriendsLocations: 친구 ID 목록:', friendIds)
 
     if (friendIds.length === 0) {
+      console.log('getFriendsLocations: 친구가 없음')
       return { success: true, data: [] }
     }
 
@@ -488,6 +496,8 @@ export const getFriendsLocations = async (userLocation?: { lat: number; lng: num
       .in('user_id', friendIds)
       .gt('expires_at', new Date().toISOString())
       .order('shared_at', { ascending: false })
+
+    console.log('getFriendsLocations: 위치 데이터 조회 결과:', locations?.length || 0, '개')
 
     if (locationError) {
       console.error('친구 위치 조회 실패:', locationError)

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Search, MapPin, Play, Bookmark, User, Navigation, Clock, Home as HomeIcon, Store, Mail, X } from 'lucide-react'
+import { Search, MapPin, Play, Bookmark, User, Navigation, Clock, Home as HomeIcon, Store, Mail, X, Users } from 'lucide-react'
 import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
 
 // KakaoMap을 dynamic import로 처리
@@ -25,10 +25,11 @@ import SupabaseStatus from '@/components/common/SupabaseStatus'
 import AuthenticationBanner from '@/components/common/AuthenticationBanner'
 import LocationPermission from '@/components/common/LocationPermission'
 import BookmarkButton from '@/components/BookmarkButton'
-import { GPSCoordinate, Course } from '@/types/database'
+import { GPSCoordinate, Course, FriendLocationData } from '@/types/database'
 import { getNearbyCoursesFromLocation, getCourses } from '@/lib/courses'
 import { getCurrentUser, signOut } from '@/lib/auth'
 import { getUserProfile } from '@/lib/profile'
+import { getFriendsLocations } from '@/lib/friends'
 import { supabase } from '@/lib/supabase'
 
 export default function Home() {
@@ -47,6 +48,11 @@ export default function Home() {
   const [signupEmail, setSignupEmail] = useState('')
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
   const [showLocationPermission, setShowLocationPermission] = useState(false)
+  
+  // 친구 위치 관련 상태
+  const [friendsLocations, setFriendsLocations] = useState<FriendLocationData[]>([])
+  const [showFriendsOnMap, setShowFriendsOnMap] = useState(true)
+  const [friendsLoading, setFriendsLoading] = useState(false)
 
   // 샘플 코스 데이터 (한강공원 여의도) - 백업용
   const sampleRoute: GPSCoordinate[] = [
@@ -105,6 +111,36 @@ export default function Home() {
     }
   }
 
+  // 인증 상태 변화 감지
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('인증 상태 변화:', event, session?.user?.email)
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // 로그인 시 게스트 모드 해제
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('runspot_guest_mode')
+          }
+          // 사용자 프로필 다시 로드
+          await loadUserProfile()
+          // 친구 위치 다시 로드
+          if (userLocation) {
+            await loadFriendsLocations()
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // 로그아웃 시 상태 초기화
+          setUserProfile(null)
+          setFriendsLocations([])
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('토큰이 갱신되었습니다.')
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [userLocation])
+
   // 위치 및 데이터 로드
   useEffect(() => {
     if (isConnected) {
@@ -112,6 +148,13 @@ export default function Home() {
       loadUserProfile()
     }
   }, [isConnected])
+
+  // 사용자 위치가 변경될 때 친구 위치 로드
+  useEffect(() => {
+    if (userLocation && isConnected) {
+      loadFriendsLocations()
+    }
+  }, [userLocation, isConnected])
 
   // 모달 상태 디버깅
   useEffect(() => {
@@ -123,6 +166,12 @@ export default function Home() {
       const user = await getCurrentUser()
       const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('runspot_guest_mode') === 'true'
       const hasSignupMessage = typeof window !== 'undefined' && localStorage.getItem('show_signup_message') === 'true'
+      
+      // 로그인된 사용자인데 게스트 모드가 설정되어 있다면 해제
+      if (user && isGuestMode) {
+        localStorage.removeItem('runspot_guest_mode')
+        console.log('로그인된 사용자 감지 - 게스트 모드 해제')
+      }
       
       if (!user && !isGuestMode && !hasSignupMessage) {
         // 로그인되지 않고 게스트 모드도 아니며 회원가입 메시지도 없는 경우 로그인 페이지로 리다이렉트
@@ -357,6 +406,43 @@ export default function Home() {
     }
   }
 
+  // 친구 위치 로드
+  const loadFriendsLocations = async () => {
+    try {
+      // 실제 로그인 상태 확인
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        console.log('로그인되지 않은 사용자입니다. 친구 위치 기능을 사용할 수 없습니다.')
+        setFriendsLocations([])
+        return
+      }
+
+      // 게스트 모드 체크 (로그인된 사용자라면 게스트 모드 해제)
+      const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('runspot_guest_mode') === 'true'
+      if (isGuestMode && currentUser) {
+        // 로그인된 사용자인데 게스트 모드가 설정되어 있다면 해제
+        localStorage.removeItem('runspot_guest_mode')
+        console.log('로그인된 사용자 - 게스트 모드 해제')
+      }
+
+      setFriendsLoading(true)
+      const result = await getFriendsLocations(userLocation || undefined)
+      
+      if (result.success && result.data) {
+        setFriendsLocations(result.data)
+        console.log('친구 위치 로드 완료:', result.data.length, '명')
+      } else {
+        console.error('친구 위치 로드 실패:', result.error)
+        setFriendsLocations([])
+      }
+    } catch (error) {
+      console.error('친구 위치 로드 오류:', error)
+      setFriendsLocations([])
+    } finally {
+      setFriendsLoading(false)
+    }
+  }
+
   // 드롭다운 외부 클릭 처리
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -479,6 +565,19 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {/* 친구 위치 토글 - 로그인된 사용자만 */}
+                {userProfile?.id && (
+                  <button 
+                    onClick={() => setShowFriendsOnMap(!showFriendsOnMap)}
+                    className={`p-2 hover:bg-muted rounded-xl transition-colors ${
+                      showFriendsOnMap ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+                    }`}
+                    title={showFriendsOnMap ? '친구 위치 숨기기' : '친구 위치 보기'}
+                  >
+                    <Users className="w-5 h-5" />
+                  </button>
+                )}
+                
                 <button 
                   onClick={moveToMyLocation}
                   disabled={locationLoading}
@@ -513,6 +612,8 @@ export default function Home() {
                 userProfile={userProfile}
                 locationAccuracy={locationAccuracy || undefined}
                 courses={nearbyCourses}
+                friendsLocations={friendsLocations}
+                showFriendsOnMap={showFriendsOnMap}
                 onCourseClick={(course) => {
                   console.log('코스 클릭:', course)
                   router.push(`/running/start?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`)
@@ -528,6 +629,14 @@ export default function Home() {
                   <span className="text-primary font-semibold">
                     {nearbyCourses.length}개 코스
                   </span>
+                  {showFriendsOnMap && friendsLocations.length > 0 && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-green-600 font-semibold">
+                        {friendsLocations.length}명 친구
+                      </span>
+                    </>
+                  )}
                   <span className="text-muted-foreground">•</span>
                   <span className="text-muted-foreground">
                     3km 반경

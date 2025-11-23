@@ -111,9 +111,9 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-[#00FF88]" />
-        <span className="ml-2 text-gray-400">친구 목록을 불러오는 중...</span>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="ml-2 text-muted-foreground">친구 목록을 불러오는 중...</span>
       </div>
     )
   }
@@ -122,10 +122,10 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">친구</h2>
+        <h2 className="text-xl font-bold text-foreground">친구</h2>
         <button
           onClick={onAddFriend}
-          className="flex items-center gap-2 px-4 py-2 bg-[#00FF88] text-black rounded-lg font-medium hover:bg-[#00FF88]/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
         >
           <UserPlus className="h-4 w-4" />
           친구 추가
@@ -133,13 +133,13 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
       </div>
 
       {/* 탭 */}
-      <div className="flex space-x-1 bg-gray-800 rounded-lg p-1">
+      <div className="flex space-x-1 bg-muted rounded-lg p-1">
         <button
           onClick={() => setActiveTab('friends')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === 'friends'
-              ? 'bg-[#00FF88] text-black'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <div className="flex items-center justify-center gap-2">
@@ -151,8 +151,8 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
           onClick={() => setActiveTab('requests')}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors relative ${
             activeTab === 'requests'
-              ? 'bg-[#00FF88] text-black'
-              : 'text-gray-400 hover:text-white'
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <div className="flex items-center justify-center gap-2">
@@ -167,8 +167,8 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
 
@@ -177,11 +177,11 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
         <div className="space-y-3">
           {friends.length === 0 ? (
             <div className="text-center py-8">
-              <Users className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400 mb-4">아직 친구가 없습니다</p>
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-4">아직 친구가 없습니다</p>
               <button
                 onClick={onAddFriend}
-                className="px-4 py-2 bg-[#00FF88] text-black rounded-lg font-medium hover:bg-[#00FF88]/90 transition-colors"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 첫 번째 친구 추가하기
               </button>
@@ -190,7 +190,7 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
             friends.map((friend) => (
               <div
                 key={friend.id}
-                className="flex items-center justify-between p-4 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+                className="flex items-center justify-between p-4 bg-card rounded-lg hover:bg-muted/50 transition-colors border border-border"
               >
                 <div className="flex items-center gap-3">
                   <div className="relative">
@@ -203,21 +203,21 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
                         className="rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center">
-                        <Users className="h-6 w-6 text-gray-400" />
+                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                        <Users className="h-6 w-6 text-muted-foreground" />
                       </div>
                     )}
                     {friend.is_location_shared && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#00FF88] rounded-full border-2 border-gray-800" />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
                     )}
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">{friend.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                    <h3 className="font-medium text-foreground">{friend.name}</h3>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>런닝 {friend.total_runs}회</span>
                       <span>{friend.total_distance.toFixed(1)}km</span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground/70">
                       친구 된 지 {formatDistanceToNow(new Date(friend.friendship_created_at), { 
                         addSuffix: true, 
                         locale: ko 
@@ -229,7 +229,7 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
                   {friend.is_location_shared && onViewFriendLocation && (
                     <button
                       onClick={() => onViewFriendLocation(friend)}
-                      className="p-2 text-[#00FF88] hover:bg-[#00FF88]/10 rounded-lg transition-colors"
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                       title="위치 보기"
                     >
                       <MapPin className="h-4 w-4" />
@@ -238,7 +238,7 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
                   <button
                     onClick={() => handleRemoveFriend(friend.friendship_id)}
                     disabled={processingRequest === friend.friendship_id}
-                    className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
                     title="친구 삭제"
                   >
                     {processingRequest === friend.friendship_id ? (
@@ -259,14 +259,14 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
         <div className="space-y-3">
           {pendingRequests.length === 0 ? (
             <div className="text-center py-8">
-              <UserPlus className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400">새로운 친구 요청이 없습니다</p>
+              <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">새로운 친구 요청이 없습니다</p>
             </div>
           ) : (
             pendingRequests.map((request) => (
               <div
                 key={request.id}
-                className="flex items-center justify-between p-4 bg-gray-800 rounded-lg"
+                className="flex items-center justify-between p-4 bg-card rounded-lg border border-border"
               >
                 <div className="flex items-center gap-3">
                   {request.requester.profile_image ? (
@@ -278,17 +278,17 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
                       className="rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-12 h-12 bg-gray-600 rounded-full flex items-center justify-center">
-                      <Users className="h-6 w-6 text-gray-400" />
+                    <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                      <Users className="h-6 w-6 text-muted-foreground" />
                     </div>
                   )}
                   <div>
-                    <h3 className="font-medium text-white">{request.requester.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                    <h3 className="font-medium text-foreground">{request.requester.name}</h3>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>런닝 {request.requester.total_runs}회</span>
                       <span>{request.requester.total_distance.toFixed(1)}km</span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground/70">
                       {formatDistanceToNow(new Date(request.created_at), { 
                         addSuffix: true, 
                         locale: ko 
@@ -300,7 +300,7 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
                   <button
                     onClick={() => handleAcceptRequest(request.id)}
                     disabled={processingRequest === request.id}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-[#00FF88] text-black rounded-lg text-sm font-medium hover:bg-[#00FF88]/90 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
                     {processingRequest === request.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -312,7 +312,7 @@ export default function FriendsList({ onAddFriend, onViewFriendLocation }: Frien
                   <button
                     onClick={() => handleRejectRequest(request.id)}
                     disabled={processingRequest === request.id}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gray-700 text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50"
                   >
                     {processingRequest === request.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
