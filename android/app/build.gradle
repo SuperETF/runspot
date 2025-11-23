@@ -3,6 +3,16 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.runspot.app"
     compileSdk rootProject.ext.compileSdkVersion
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    
+    
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "com.runspot.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -10,6 +20,15 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+        // 환경 변수에서 카카오맵 API 키 가져오기
+        def kakaoNativeKey = project.hasProperty('KAKAO_NATIVE_APP_KEY') ? 
+            project.property('KAKAO_NATIVE_APP_KEY') : 
+            System.getenv('NEXT_PUBLIC_KAKAO_NATIVE_APP_KEY') ?: "default_key"
+        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", "\"${System.getenv('NEXT_PUBLIC_KAKAO_NATIVE_APP_KEY') ?: ''}\""
+        if (!buildConfigFields.containsKey("MAPBOX_ACCESS_TOKEN")) {
+            buildConfigField "String", "MAPBOX_ACCESS_TOKEN", "\"${System.getenv('MAPBOX_ACCESS_TOKEN') ?: ''}\""
+        }
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -31,15 +50,28 @@ repositories {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation project(':capacitor-app')
+    implementation project(':capacitor-haptics')
+    implementation project(':capacitor-status-bar')
+    implementation project(':capacitor-cordova-android-plugins')
+    
+    // 카카오맵 SDK (백업용)
+    implementation 'com.kakao.maps.open:android:2.9.5'
+    
+    
+    // Mapbox Navigation SDK (메인 네비게이션)
+    implementation 'com.mapbox.navigation:android:2.17.0'
+    implementation 'com.mapbox.navigation:ui-dropin:2.17.0'
+    implementation 'com.mapbox.maps:android:10.16.0'
+    
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
-    implementation project(':capacitor-cordova-android-plugins')
 }
 
 apply from: 'capacitor.build.gradle'

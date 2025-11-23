@@ -151,45 +151,48 @@ export default function RunningPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* 상단 헤더 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800">
-        <div className="flex items-center justify-between px-4 py-3">
+      {/* 상단 헤더 + 탭 네비게이션 - 모바일 알림창 피하기 및 고정 */}
+      <div className="sticky top-0 z-40 bg-black/95 backdrop-blur-xl border-b border-gray-800 safe-top">
+        <div className="flex items-center justify-between px-4 py-4">
           <button 
             onClick={() => router.back()}
             className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-semibold">런닝 시작</h1>
+          <div className="text-center">
+            <h1 className="text-xl font-bold">런닝 코스</h1>
+            <p className="text-sm text-gray-400">서울의 베스트 런닝 코스를 탐색하세요</p>
+          </div>
           <div className="w-10"></div>
         </div>
-      </div>
 
-      {/* 탭 네비게이션 */}
-      <div className="px-4 pt-4">
-        <div className="flex bg-gray-900/50 rounded-2xl p-1">
-          <button
-            onClick={() => setActiveTab('explore')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 ${
-              activeTab === 'explore'
-                ? 'bg-[#00FF88] text-black font-semibold'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <Search className="w-4 h-4" />
-            <span>코스 탐색</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('recent')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 ${
-              activeTab === 'recent'
-                ? 'bg-[#00FF88] text-black font-semibold'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            <span>최근 코스</span>
-          </button>
+        {/* 탭 네비게이션 - 헤더에 포함하여 고정 */}
+        <div className="px-4 pb-4">
+          <div className="flex bg-gray-900/80 rounded-2xl p-1 border border-gray-800">
+            <button
+              onClick={() => setActiveTab('explore')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 ${
+                activeTab === 'explore'
+                  ? 'bg-[#00FF88] text-black font-semibold'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Search className="w-4 h-4" />
+              <span>코스 탐색</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('recent')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-200 ${
+                activeTab === 'recent'
+                  ? 'bg-[#00FF88] text-black font-semibold'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              <span>최근 코스</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -305,7 +308,122 @@ export default function RunningPage() {
             )}
           </div>
 
-          {activeTab === 'explore' ? (
+          {activeTab === 'recent' ? (
+            loading ? (
+              <div className="space-y-4">
+                {/* 최근 코스 로딩 스켈레톤 */}
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 animate-pulse">
+                    <div className="flex items-start gap-4">
+                      <div className="w-8 h-8 bg-gray-700 rounded"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-700 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-700 rounded w-1/2 mb-3"></div>
+                        <div className="flex gap-4 mb-3">
+                          <div className="h-3 bg-gray-700 rounded w-16"></div>
+                          <div className="h-3 bg-gray-700 rounded w-16"></div>
+                          <div className="h-3 bg-gray-700 rounded w-12"></div>
+                        </div>
+                        <div className="h-3 bg-gray-700 rounded w-3/4"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : recentCourses.length > 0 ? (
+              <div className="space-y-4">
+                {recentCourses.map((course: any, index: number) => (
+                  <div 
+                    key={course.id}
+                    className={`bg-gray-900/80 glass rounded-2xl p-4 border transition-all duration-300 cursor-pointer animate-fade-in-up ${
+                      selectedCourse === course.id 
+                        ? 'border-[#00FF88] bg-[#00FF88]/10' 
+                        : 'border-gray-800 hover:border-gray-700'
+                    }`}
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                    onClick={() => setSelectedCourse(selectedCourse === course.id ? null : course.id)}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <CourseMarkerIcon 
+                          courseType="running" 
+                          size={48}
+                          className="hover:scale-110 transition-transform duration-200"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-white">{course.name}</h4>
+                          <div className="flex items-center gap-2">
+                            {/* 완주 여부 배지 */}
+                            {course.lastRunCompleted ? (
+                              <span className="px-2 py-1 bg-[#00FF88]/20 text-[#00FF88] text-xs font-medium rounded-full border border-[#00FF88]/30">
+                                ✅ 완주
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-orange-500/20 text-orange-400 text-xs font-medium rounded-full border border-orange-500/30">
+                                ⏸️ 미완주
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <div className="flex items-center gap-3 text-sm mb-2">
+                            <span className="text-gray-400">{course.area}</span>
+                            <span className="text-[#00FF88] font-medium">{course.distance}km</span>
+                            <span className="text-gray-400">총 {course.runCount}회</span>
+                          </div>
+                          
+                          {/* 완주율 표시 */}
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-500">완주율:</span>
+                            <div className="flex-1 bg-gray-700 rounded-full h-2">
+                              <div 
+                                className="bg-[#00FF88] h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${course.completionRate}%` }}
+                              />
+                            </div>
+                            <span className="text-[#00FF88] font-medium">{course.completionRate}%</span>
+                          </div>
+                        </div>
+                        
+                        {/* 최근 런닝 정보 */}
+                        <div className="text-xs text-gray-400">
+                          최근 런닝: {new Date(course.lastRun).toLocaleDateString('ko-KR')} • 
+                          {course.lastRunDistance ? ` ${course.lastRunDistance.toFixed(2)}km` : ''} • 
+                          {course.lastRunDuration ? ` ${Math.round(course.lastRunDuration / 60)}분` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 선택된 코스의 시작 버튼 */}
+                    {selectedCourse === course.id && (
+                      <div className="mt-4 pt-4 border-t border-gray-700">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            startRunning(course.id)
+                          }}
+                          className="w-full bg-[#00FF88] hover:bg-[#00E077] text-black font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 transform hover:scale-[1.02]"
+                        >
+                          <Play className="w-5 h-5 fill-current" />
+                          다시 런닝하기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* 최근 코스 없음 */
+              <div className="text-center py-8 bg-gray-900/80 glass rounded-2xl border border-gray-800">
+                <History className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 mb-2">아직 뛰었던 코스가 없습니다</p>
+                <p className="text-sm text-gray-500">새로운 코스를 탐색해보세요!</p>
+              </div>
+            )
+          ) : activeTab === 'explore' ? (
             exploreLoading ? (
               <div className="space-y-4">
                 {/* 로딩 스켈레톤 */}

@@ -269,8 +269,8 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* 상단 헤더 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800">
+      {/* 상단 헤더 - 모바일 알림창 피하기 */}
+      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}
@@ -526,6 +526,12 @@ export default function ProfilePage() {
 
             {/* 설정 메뉴 */}
             <div className="bg-gray-900/80 glass rounded-2xl border border-gray-800 overflow-hidden">
+              <button 
+                onClick={() => router.push('/profile/friends')}
+                className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors border-b border-gray-800"
+              >
+                <span className="text-white">친구</span>
+              </button>
               <button 
                 onClick={() => router.push('/profile/notifications')}
                 className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors border-b border-gray-800"

@@ -20,7 +20,7 @@ export default function RunningHeader({
   onShare
 }: RunningHeaderProps) {
   return (
-    <div className="sticky top-0 z-50 bg-black/90 backdrop-blur-sm border-b border-gray-800">
+    <div className="sticky top-0 z-50 bg-black/90 backdrop-blur-sm border-b border-gray-800 safe-top">
       <div className="flex items-center justify-between p-4">
         <button
           onClick={onBack}

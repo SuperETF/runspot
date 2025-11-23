@@ -17,6 +17,12 @@ const config: CapacitorConfig = {
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false
+    },
+    NativeNavigation: {
+      // 네이티브 네비게이션 플러그인 설정
+      enableBackgroundLocation: true,
+      locationUpdateInterval: 1000, // 1초마다 위치 업데이트
+      navigationAccuracy: 'high'
     }
   },
   android: {

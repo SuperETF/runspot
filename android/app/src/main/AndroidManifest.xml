@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
+        android:name=".RunSpotApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -25,6 +26,14 @@
             </intent-filter>
 
         </activity>
+
+        <!-- Mapbox 네비게이션 액티비티 (동적 UI 생성) -->
+        <activity
+            android:name=".MapboxNavigationActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.FullScreen"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

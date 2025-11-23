@@ -389,6 +389,137 @@ export interface Database {
           updated_at?: string
         }
       }
+      friendships: {
+        Row: {
+          id: string
+          requester_id: string
+          addressee_id: string
+          status: 'pending' | 'accepted' | 'blocked'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          requester_id: string
+          addressee_id: string
+          status?: 'pending' | 'accepted' | 'blocked'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          requester_id?: string
+          addressee_id?: string
+          status?: 'pending' | 'accepted' | 'blocked'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_location_settings: {
+        Row: {
+          id: string
+          user_id: string
+          sharing_status: 'disabled' | 'friends_only' | 'running_only'
+          share_during_running: boolean
+          share_with_friends: boolean
+          location_update_interval: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          sharing_status?: 'disabled' | 'friends_only' | 'running_only'
+          share_during_running?: boolean
+          share_with_friends?: boolean
+          location_update_interval?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          sharing_status?: 'disabled' | 'friends_only' | 'running_only'
+          share_during_running?: boolean
+          share_with_friends?: boolean
+          location_update_interval?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      shared_locations: {
+        Row: {
+          id: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy: number | null
+          speed: number | null
+          heading: number | null
+          is_running: boolean
+          course_id: string | null
+          shared_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          latitude: number
+          longitude: number
+          accuracy?: number | null
+          speed?: number | null
+          heading?: number | null
+          is_running?: boolean
+          course_id?: string | null
+          shared_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          latitude?: number
+          longitude?: number
+          accuracy?: number | null
+          speed?: number | null
+          heading?: number | null
+          is_running?: boolean
+          course_id?: string | null
+          shared_at?: string
+          expires_at?: string
+        }
+      }
+      friend_activities: {
+        Row: {
+          id: string
+          user_id: string
+          activity_type: string
+          activity_data: any
+          course_id: string | null
+          running_log_id: string | null
+          is_public: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          activity_type: string
+          activity_data: any
+          course_id?: string | null
+          running_log_id?: string | null
+          is_public?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          activity_type?: string
+          activity_data?: any
+          course_id?: string | null
+          running_log_id?: string | null
+          is_public?: boolean
+          created_at?: string
+        }
+      }
     }
   }
 }
@@ -430,6 +561,22 @@ export type Inquiry = Database['public']['Tables']['inquiries']['Row']
 export type InquiryInsert = Database['public']['Tables']['inquiries']['Insert']
 export type InquiryUpdate = Database['public']['Tables']['inquiries']['Update']
 
+export type Friendship = Database['public']['Tables']['friendships']['Row']
+export type FriendshipInsert = Database['public']['Tables']['friendships']['Insert']
+export type FriendshipUpdate = Database['public']['Tables']['friendships']['Update']
+
+export type UserLocationSettings = Database['public']['Tables']['user_location_settings']['Row']
+export type UserLocationSettingsInsert = Database['public']['Tables']['user_location_settings']['Insert']
+export type UserLocationSettingsUpdate = Database['public']['Tables']['user_location_settings']['Update']
+
+export type SharedLocation = Database['public']['Tables']['shared_locations']['Row']
+export type SharedLocationInsert = Database['public']['Tables']['shared_locations']['Insert']
+export type SharedLocationUpdate = Database['public']['Tables']['shared_locations']['Update']
+
+export type FriendActivity = Database['public']['Tables']['friend_activities']['Row']
+export type FriendActivityInsert = Database['public']['Tables']['friend_activities']['Insert']
+export type FriendActivityUpdate = Database['public']['Tables']['friend_activities']['Update']
+
 // Additional types for the app
 export interface CourseWithReviews extends Course {
   reviews: Review[]
@@ -467,3 +614,40 @@ export interface DeviationWarning {
   timestamp: string
   distance: number
 }
+
+// 친구 시스템 관련 추가 타입들
+export interface FriendWithDetails extends User {
+  friendship_id: string
+  friendship_status: 'pending' | 'accepted' | 'blocked'
+  friendship_created_at: string
+  is_requester: boolean
+  is_location_shared?: boolean
+  last_shared_location?: SharedLocation
+}
+
+export interface FriendRequest {
+  id: string
+  requester: User
+  addressee: User
+  status: 'pending' | 'accepted' | 'blocked'
+  created_at: string
+}
+
+export interface LocationSharingSettings {
+  sharing_status: 'disabled' | 'friends_only' | 'running_only'
+  share_during_running: boolean
+  share_with_friends: boolean
+  location_update_interval: number
+}
+
+export interface FriendLocationData {
+  friend: User
+  location: SharedLocation
+  distance_from_user?: number // 사용자로부터의 거리 (km)
+  is_running: boolean
+  course?: Course | null
+}
+
+export type FriendshipStatus = 'pending' | 'accepted' | 'blocked'
+export type LocationSharingStatus = 'disabled' | 'friends_only' | 'running_only'
+export type FriendActivityType = 'run_completed' | 'course_reviewed' | 'achievement_unlocked' | 'course_bookmarked'

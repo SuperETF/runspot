@@ -36,8 +36,8 @@ export default function SavedPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* 상단 헤더 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800">
+      {/* 상단 헤더 - 모바일 알림창 피하기 */}
+      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}

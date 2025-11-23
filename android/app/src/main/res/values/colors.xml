@@ -7,4 +7,8 @@
     <!-- 스플래시 화면 색상 -->
     <color name="splash_background">#000000</color>
     <color name="splash_text">#00FF88</color>
+    
+    <!-- 네비게이션 색상 -->
+    <color name="route_color">#2563EB</color>
+    <color name="current_location_color">#00FF88</color>
 </resources>

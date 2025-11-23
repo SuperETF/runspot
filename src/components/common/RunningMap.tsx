@@ -13,31 +13,8 @@ import {
   type RoutePointWithDistance, 
   type NavigationProgress as PedestrianProgress 
 } from '@/utils/mapUtils'
-// 카카오맵 네비게이션 함수들
-import { 
-  generateKakaoBicycleNavUrl, 
-  generateKakaoWebFallbackUrl 
-} from '@/services/routeOptimization'
-// 카카오 길찾기 기반 네비게이션 및 음성 안내
-import { 
-  createRunningNavigation,
-  generateVoiceGuidance,
-  speakNavigation,
-  type NavigationState      // 카카오 네비게이션 상태 (음성 안내용)
-} from '@/utils/kakaoNavigation'
-import { kakaoNavService } from '../../services/kakaoNavigation'
-import type { KakaoNavigationRoute, TurnInstruction } from '../../services/kakaoNavigation'
-import FullScreenNavigation from '../navigation/FullScreenNavigation'
-// 순수 좌표 계산 및 코스 기반 1인칭 네비게이션
-import {
-  getProgressOnRoute,
-  haversineDistance,
-  calculateBearing,
-  calculateSmoothBearing,
-  NAVIGATION_CONSTANTS,
-  type RoutePoint,
-  type NavigationProgress   // 1인칭 모드 네비게이션 상태 (진행률, 이탈 여부)
-} from '@/utils/navigationEngine'
+// 기본 거리 계산만 사용
+import { haversineDistance } from '@/utils/navigationEngine'
 
 // 디버깅 플래그
 const DEBUG = process.env.NODE_ENV === 'development'
@@ -73,57 +50,33 @@ interface CourseProximity {
 interface RunningMapProps {
   isRunning: boolean
   onLocationUpdate?: (location: { lat: number; lng: number }) => void
-  onDistanceUpdate?: (distance: number) => void
   userLocation?: { lat: number; lng: number } | null
   showStartPoint?: boolean
   currentCheckpoint?: number
   passedCheckpoints?: number[]
   isCompleted?: boolean
-  onNavigationReady?: (startNav: () => void, stopNav: () => void, isNavMode: boolean, startFullScreenNav: () => void) => void
   // 화면 모드 구분
   mode?: 'preview' | 'waiting' | 'running'
-  // 런닝 통계 데이터
-  runningStats?: {
-    time: number
-    distance: number
-    pace: number
-  }
-  // 런닝 컨트롤 함수들
-  onPause?: () => void
-  onStop?: () => void
-  isPaused?: boolean
   // 시작점 도착 상태 콜백
   onStartPointStatusChange?: (isAtStartPoint: boolean, distanceToStart: number) => void
-  // floating 네비게이션 숨김 옵션
-  hideFloatingNavigation?: boolean
-  // 네비게이션 상태 콜백
-  onNavigationUpdate?: (navigationState: NavigationState | null) => void
-  // 음성 안내 활성화 상태
-  voiceGuidanceEnabled?: boolean
   // 보행자 네비게이션 MVP: 진행률 콜백
   onProgressUpdate?: (progress: PedestrianProgress | null) => void
+  // 친구 위치 표시 여부
+  showFriends?: boolean
 }
 
 export default function RunningMap({ 
   isRunning, 
   onLocationUpdate, 
-  onDistanceUpdate, 
   userLocation, 
   showStartPoint = false,
   currentCheckpoint = 0,
   passedCheckpoints = [],
   isCompleted = false,
-  onNavigationReady,
-  runningStats,
-  onPause,
-  onStop,
-  isPaused = false,
   onStartPointStatusChange,
-  hideFloatingNavigation = false,
-  onNavigationUpdate,
-  voiceGuidanceEnabled = false,
   onProgressUpdate,
-  mode = 'preview' // 기본값은 미리보기 모드
+  mode = 'preview', // 기본값은 미리보기 모드
+  showFriends = false
 }: RunningMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const isMountedRef = useRef(true)
@@ -172,57 +125,13 @@ export default function RunningMap({
     }
   }, [courseRoute])
 
-  // 길찾기 경로 상태
-  const [routePath, setRoutePath] = useState<any[]>([])
-  const [routePolyline, setRoutePolyline] = useState<any>(null)
-  const [directionMarkers, setDirectionMarkers] = useState<any[]>([])
   const [logoBase64, setLogoBase64] = useState<string>('')
-
-  // 네비게이션 상태
-  const [navigationStats, setNavigationStats] = useState({
-    currentDistance: 0,
-    remainingDistance: 0,
-    estimatedTime: 0,
-    nextDirection: "코스를 따라 직진하세요",
-    nextDistance: 0
-  })
-
-  // 카카오 길찾기 기반 네비게이션 상태 (음성 안내용)
-  const [advancedNavigation, setAdvancedNavigation] = useState<NavigationState | null>(null)
-  const [lastVoiceGuidance, setLastVoiceGuidance] = useState<string>('')
 
   // 보행자 네비게이션 MVP 상태
   const [pedestrianProgress, setPedestrianProgress] = useState<PedestrianProgress | null>(null)
   const [routePoints, setRoutePoints] = useState<RoutePointWithDistance[]>([])
   
-  // 앱 내 카카오맵 네비게이션 상태 (자동차 네비게이션 스타일)
-  const [isInAppNavActive, setIsInAppNavActive] = useState(false)
-  const [navigationRoute, setNavigationRoute] = useState<KakaoNavigationRoute | null>(null)
-  const [currentTurnInstruction, setCurrentTurnInstruction] = useState<TurnInstruction | null>(null)
-  
-  // 네비게이션 모드 상태 (지도 회전 + 방향 추적)
-  const [isNavigationMode, setIsNavigationMode] = useState(false)
-  
-  // 전체 화면 네비게이션 상태
-  const [isFullScreenNavActive, setIsFullScreenNavActive] = useState(false)
-  const [firstPersonState, setFirstPersonState] = useState<FirstPersonState>({
-    isActive: false,
-    trackingWatchId: null,
-    lastPosition: null,
-    currentBearing: 0,
-    smoothBearing: 0,
-    positionHistory: [],
-    currentSpeed: 0
-  })
-  
-  // 코스 근접 상태
-  const [courseProximity, setCourseProximity] = useState<CourseProximity>({
-    isNearStart: false,
-    isNearFinish: false,
-    distanceToStart: Infinity,
-    distanceToFinish: Infinity,
-    hasCompleted: false
-  })
+  // MVP: 간단한 상태만 유지
 
   // 초기 코스 표시 여부 (처음 진입 시에만 전체 코스 보기)
   const [hasInitiallyShownCourse, setHasInitiallyShownCourse] = useState(false)
@@ -243,7 +152,7 @@ export default function RunningMap({
         onProgressUpdate(progress)
       }
       
-      DEBUG && console.log('🚶‍♂️ RunningStore 위치 업데이트 - 보행자 네비게이션 진행률:', {
+      DEBUG && console.log('🚶‍♂️ 보행자 네비게이션 진행률:', {
         진행률: `${progress.progressPercent.toFixed(1)}%`,
         통과거리: `${(progress.passedDistance / 1000).toFixed(2)}km`,
         총거리: `${(progress.totalDistance / 1000).toFixed(2)}km`,
@@ -256,109 +165,11 @@ export default function RunningMap({
     }
   }, [mode, currentPosition, routePoints, onProgressUpdate])
 
-  // 앱 내 카카오맵 네비게이션 시작
-  const startInAppNavigation = useCallback(async () => {
-    if (!courseRoute || courseRoute.length === 0 || !userLocation) {
-      alert('경로 정보가 없거나 현재 위치를 확인할 수 없습니다.')
-      return
-    }
+  // MVP: 복잡한 네비게이션 제거
 
-    try {
-      console.log('🗺️ 앱 내 카카오맵 네비게이션 시작')
-      
-      // 시작점과 끝점 설정
-      const origin = { lat: userLocation.lat, lng: userLocation.lng }
-      const destination = { lat: courseRoute[courseRoute.length - 1].lat, lng: courseRoute[courseRoute.length - 1].lng }
-      
-      // 중간 경유지 (GPX 포인트 중 일부만 사용)
-      const waypoints = courseRoute
-        .slice(1, -1)
-        .filter((_, index) => index % 10 === 0) // 10개마다 하나씩만 경유지로 사용
-        .map(point => ({ lat: point.lat, lng: point.lng }))
+  // MVP: 복잡한 네비게이션 제거
 
-      // 카카오 네비게이션 서비스로 경로 계산
-      const route = await kakaoNavService.calculateRoute(origin, destination, waypoints)
-      setNavigationRoute(route)
-      setIsInAppNavActive(true)
-
-      // 지도에 경로 표시
-      if (map && route) {
-        const kakao = (window as any).kakao
-        
-        // 기존 경로 폴리라인 제거
-        if (routePolyline) {
-          routePolyline.setMap(null)
-        }
-
-        // 새로운 네비게이션 경로 폴리라인 생성
-        const routePath = route.segments.flatMap(segment => 
-          segment.points.map(point => new kakao.maps.LatLng(point.lat, point.lng))
-        )
-        
-        const newRoutePolyline = new kakao.maps.Polyline({
-          path: routePath,
-          strokeWeight: 6,
-          strokeColor: '#FF6B00', // 주황색으로 네비게이션 경로 표시
-          strokeOpacity: 0.9,
-          strokeStyle: 'solid'
-        })
-
-        newRoutePolyline.setMap(map)
-        setRoutePolyline(newRoutePolyline)
-
-        // 지도 범위를 경로에 맞게 조정
-        const bounds = new kakao.maps.LatLngBounds()
-        routePath.forEach(point => bounds.extend(point))
-        map.setBounds(bounds, 50)
-      }
-
-      console.log('✅ 앱 내 네비게이션 경로 계산 완료:', route)
-    } catch (error) {
-      console.error('❌ 앱 내 네비게이션 시작 실패:', error)
-      alert('네비게이션을 시작할 수 없습니다. 다시 시도해주세요.')
-    }
-  }, [courseRoute, userLocation, map, routePolyline])
-
-  // 앱 내 네비게이션 중지
-  const stopInAppNavigation = useCallback(() => {
-    setIsInAppNavActive(false)
-    setNavigationRoute(null)
-    setCurrentTurnInstruction(null)
-    
-    // 네비게이션 경로 폴리라인 제거
-    if (routePolyline) {
-      routePolyline.setMap(null)
-      setRoutePolyline(null)
-    }
-
-    // 원래 코스 폴리라인 복원
-    if (map && courseRoute.length > 0) {
-      const kakao = (window as any).kakao
-      const path = courseRoute.map((point: any) => new kakao.maps.LatLng(point.lat, point.lng))
-      const coursePolylineRestored = new kakao.maps.Polyline({
-        path: path,
-        strokeWeight: 4,
-        strokeColor: mode === 'running' ? '#FF6B00' : '#00FF88',
-        strokeOpacity: 0.8,
-        strokeStyle: 'solid'
-      })
-      coursePolylineRestored.setMap(map)
-      setCoursePolyline(coursePolylineRestored)
-    }
-
-    console.log('🛑 앱 내 네비게이션 중지')
-  }, [routePolyline, map, courseRoute, mode])
-
-  // 현재 위치 기준 턴 안내 업데이트
-  useEffect(() => {
-    if (isInAppNavActive && navigationRoute && currentPosition) {
-      const turnInstruction = kakaoNavService.getNextTurnInstruction(
-        navigationRoute, 
-        { lat: currentPosition.lat, lng: currentPosition.lng }
-      )
-      setCurrentTurnInstruction(turnInstruction)
-    }
-  }, [isInAppNavActive, navigationRoute, currentPosition])
+  // MVP: 복잡한 네비게이션 제거
 
   // 시작점 도착 상태 확인 및 업데이트
   useEffect(() => {
@@ -1178,34 +989,85 @@ export default function RunningMap({
     }
   }, [isNavigationMode, firstPersonState.trackingWatchId, currentMarker, map, onNavigationUpdate])
 
-  // 전체 화면 네비게이션 시작
-  const startFullScreenNavigation = useCallback(() => {
-    console.log('🎯 startFullScreenNavigation 호출됨:', {
+  // Capacitor 네이티브 플러그인을 통한 Mapbox Navigation 시작
+  const startFullScreenNavigation = useCallback(async () => {
+    console.log('🎯 Capacitor 네이티브 네비게이션 시작:', {
       mode,
-      courseRouteLength: courseRoute?.length || 0,
-      isFullScreenNavActive
-    })
-    
-    // 런닝 모드가 아니면 경고만 출력하고 계속 진행 (자동 진입을 위해)
-    if (mode !== 'running') {
-      console.log('⚠️ 런닝 모드가 아니지만 전체화면 네비게이션 시도:', mode)
-      // alert 제거 - 자동 진입 시에는 경고창이 방해가 됨
-    }
+      courseRouteLength: courseRoute?.length || 0
+    });
     
     if (!courseRoute || courseRoute.length < 2) {
       console.log('❌ 코스 데이터 부족:', courseRoute?.length || 0)
       alert('코스 데이터가 없습니다.')
-      return
+      return;
     }
 
-    setIsFullScreenNavActive(true)
-    console.log('✅ 전체 화면 네비게이션 시작 성공')
-  }, [mode, courseRoute])
+    try {
+      // Capacitor 플러그인 동적 import (웹 환경에서는 fallback)
+      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+        // 네이티브 환경: Capacitor 플러그인 호출
+        const { Capacitor } = await import('@capacitor/core')
+        
+        if (Capacitor.isNativePlatform()) {
+          // registerPlugin으로 등록된 플러그인 호출
+          const { registerPlugin } = await import('@capacitor/core')
+          const MapboxNavigationPlugin = registerPlugin('MapboxNavigationPlugin')
+          
+          const result = await (MapboxNavigationPlugin as any).startNavigation({
+            waypoints: courseRoute.map(point => ({
+              latitude: point.lat,
+              longitude: point.lng
+            })),
+            currentLocation: currentPosition ? {
+              latitude: currentPosition.lat,
+              longitude: currentPosition.lng
+            } : null,
+            courseName: '런닝 코스'
+          })
+          
+          console.log('✅ Capacitor 네이티브 네비게이션 시작 완료:', result)
+          return
+        }
+      }
+      
+      // 웹 환경 또는 Capacitor 없음: 카카오맵 네비게이션으로 fallback
+      console.log('🌐 웹 환경: 카카오맵 네비게이션으로 fallback')
+      if (currentPosition && courseRoute.length > 0) {
+        const kakaoUrl = generateKakaoBicycleNavUrl(currentPosition, courseRoute, true)
+        window.open(kakaoUrl, '_blank')
+      } else {
+        console.warn('⚠️ 현재 위치 또는 코스 경로가 없어 카카오맵 네비게이션을 실행할 수 없습니다')
+      }
+      
+    } catch (error) {
+      console.error('❌ 네비게이션 시작 실패:', error)
+      // Fallback: 카카오맵 네비게이션
+      if (currentPosition && courseRoute.length > 0) {
+        const kakaoUrl = generateKakaoBicycleNavUrl(currentPosition, courseRoute, true)
+        window.open(kakaoUrl, '_blank')
+      } else {
+        console.warn('⚠️ Fallback 실패: 현재 위치 또는 코스 경로가 없습니다')
+      }
+    }
+  }, [mode, courseRoute, currentPosition])
 
-  // 전체 화면 네비게이션 종료
-  const stopFullScreenNavigation = useCallback(() => {
-    setIsFullScreenNavActive(false)
-    console.log('🛑 전체 화면 네비게이션 종료')
+  // Capacitor 네이티브 네비게이션 종료
+  const stopFullScreenNavigation = useCallback(async () => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).Capacitor) {
+        const { Capacitor, registerPlugin } = await import('@capacitor/core')
+        
+        if (Capacitor.isNativePlatform()) {
+          const MapboxNavigationPlugin = registerPlugin('MapboxNavigationPlugin')
+          await (MapboxNavigationPlugin as any).stopNavigation()
+          console.log('🛑 Capacitor 네이티브 네비게이션 종료 완료')
+        }
+      } else {
+        console.log('🌐 웹 환경: 네비게이션 종료 불필요')
+      }
+    } catch (error) {
+      console.error('❌ 네비게이션 종료 실패:', error)
+    }
   }, [])
 
 
@@ -1502,14 +1364,7 @@ export default function RunningMap({
         </div>
       )}
 
-      {/* 전체 화면 네비게이션 */}
-      <FullScreenNavigation
-        isActive={isFullScreenNavActive}
-        onClose={stopFullScreenNavigation}
-        courseRoute={courseRoute}
-        currentPosition={currentPosition}
-        onLocationUpdate={onLocationUpdate}
-      />
+      {/* 전체 화면 네비게이션 (제거됨 - Mapbox Navigation으로 교체) */}
     </div>
   )
 }

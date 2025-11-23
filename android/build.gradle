@@ -21,6 +21,18 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // 카카오맵 SDK 저장소
+        maven { url 'https://devrepo.kakao.com/nexus/content/groups/public/' }
+        maven { 
+            url 'https://api.mapbox.com/downloads/v2/releases/maven'
+            authentication {
+                basic(BasicAuthentication)
+            }
+            credentials {
+                username = "mapbox"
+                password = System.getenv('MAPBOX_DOWNLOADS_TOKEN') ?: System.getenv('MAPBOX_ACCESS_TOKEN') ?: ""
+            }
+        }
     }
 }
 

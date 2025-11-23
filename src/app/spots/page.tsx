@@ -532,8 +532,8 @@ export default function SpotsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* 상단 헤더 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800">
+      {/* 상단 헤더 - 모바일 알림창 피하기 */}
+      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}
@@ -553,16 +553,7 @@ export default function SpotsPage() {
             <MapPin className="w-8 h-8 text-black" />
           </div>
           <h2 className="text-xl font-bold text-white mb-2">런 - 스팟</h2>
-          <p className="text-gray-400 mb-4">러너들을 위한 혜택을 제공하는 파트너 매장들</p>
-          
-          {/* 인증 내역 버튼 */}
-          <button 
-            onClick={() => router.push('/spots/history')}
-            className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl transition-colors"
-          >
-            <Clock className="w-4 h-4" />
-            <span>인증 완료 내역</span>
-          </button>
+          <p className="text-gray-400">러너들을 위한 혜택을 제공하는 파트너 매장들</p>
         </div>
 
 
@@ -1005,6 +996,26 @@ export default function SpotsPage() {
   </div>
 </div>
 )}
+
+      {/* 하단 탭 네비게이션 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-gray-800/50 safe-bottom">
+        <div className="flex items-center justify-around py-2">
+          <button className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group">
+            <MapPin className="w-6 h-6 text-[#00FF88] group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-[#00FF88] font-medium">스팟</span>
+          </button>
+          <button 
+            onClick={() => router.push('/spots/history')}
+            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+          >
+            <Clock className="w-6 h-6 text-gray-400 group-hover:text-[#00FF88] group-hover:scale-110 transition-all" />
+            <span className="text-xs text-gray-400 group-hover:text-[#00FF88] transition-colors">인증 내역</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 하단 여백 (탭 네비게이션 높이만큼) */}
+      <div className="h-20"></div>
     </div>
   )
 }

@@ -57,12 +57,15 @@ export async function getCourseRunCount(userId: string, courseId: string) {
 // 사용자가 뛴 고유 코스들과 각 코스의 최근 런닝 정보
 export async function getUserRecentCourses(userId: string, limit: number = 5) {
   try {
-    // 1. 사용자가 뛴 고유 코스들의 최근 런닝 로그 가져오기
+    // 1. 사용자가 뛴 고유 코스들의 최근 런닝 로그 가져오기 (완주 정보 포함)
     const { data: recentLogs, error: logsError } = await supabase
       .from('running_logs')
       .select(`
         course_id,
         completed_at,
+        distance,
+        duration,
+        is_completed,
         courses!inner (
           id,
           name,
@@ -85,7 +88,7 @@ export async function getUserRecentCourses(userId: string, limit: number = 5) {
       return []
     }
 
-    // 2. 코스별로 그룹화하고 최근 런닝 날짜와 총 횟수 계산
+    // 2. 코스별로 그룹화하고 최근 런닝 날짜와 총 횟수, 완주 정보 계산
     const courseMap = new Map()
     
     for (const log of recentLogs) {
@@ -95,11 +98,18 @@ export async function getUserRecentCourses(userId: string, limit: number = 5) {
         courseMap.set(courseId, {
           course: log.courses,
           lastRun: log.completed_at,
-          runCount: 1
+          lastRunDistance: log.distance,
+          lastRunDuration: log.duration,
+          lastRunCompleted: log.is_completed,
+          runCount: 1,
+          completedCount: log.is_completed ? 1 : 0
         })
       } else {
         const existing = courseMap.get(courseId)
         existing.runCount += 1
+        if (log.is_completed) {
+          existing.completedCount += 1
+        }
         // 최근 날짜 유지 (이미 최신순으로 정렬되어 있음)
       }
     }
@@ -117,7 +127,12 @@ export async function getUserRecentCourses(userId: string, limit: number = 5) {
         difficulty: item.course.difficulty,
         rating: item.course.rating_avg || 0,
         lastRun: item.lastRun,
-        runCount: item.runCount
+        lastRunDistance: item.lastRunDistance,
+        lastRunDuration: item.lastRunDuration,
+        lastRunCompleted: item.lastRunCompleted,
+        runCount: item.runCount,
+        completedCount: item.completedCount,
+        completionRate: Math.round((item.completedCount / item.runCount) * 100)
       }))
 
     return result
@@ -136,6 +151,7 @@ export async function saveRunningLog(logData: {
   avgSpeed: number
   calories: number
   gpsPath: Array<{ lat: number; lng: number; timestamp: string }>
+  isCompleted?: boolean
 }) {
   try {
     const { data, error } = await (supabase
@@ -148,6 +164,7 @@ export async function saveRunningLog(logData: {
         avg_speed: logData.avgSpeed,
         calories: logData.calories,
         gps_path: logData.gpsPath,
+        is_completed: logData.isCompleted || false,
         completed_at: new Date().toISOString()
       })
       .select()
