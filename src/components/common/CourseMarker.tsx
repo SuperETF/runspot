@@ -63,7 +63,7 @@ const CourseMarker = ({
           }}
         >
           {profileImage ? (
-            <div className="w-14 h-14 rounded-full border-3 border-[#00FF88] shadow-lg overflow-hidden bg-white relative">
+            <div className="w-14 h-14 rounded-full border-3 border-primary shadow-lg overflow-hidden bg-white relative">
               <img
                 src={profileImage}
                 alt="내 프로필"
@@ -74,15 +74,15 @@ const CourseMarker = ({
                 }}
               />
               {/* 온라인 상태 표시 점 */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#00FF88] rounded-full border-2 border-white shadow-sm"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-primary rounded-full border-2 border-white shadow-sm"></div>
             </div>
           ) : (
-            <div className="w-14 h-14 rounded-full border-3 border-[#00FF88] bg-[#00FF88] flex items-center justify-center shadow-lg relative">
-              <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+            <div className="w-14 h-14 rounded-full border-3 border-primary bg-primary flex items-center justify-center shadow-lg relative">
+              <svg className="w-6 h-6 text-primary-foreground" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
               </svg>
               {/* 온라인 상태 표시 점 */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full border-2 border-[#00FF88] shadow-sm"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full border-2 border-primary shadow-sm"></div>
             </div>
           )}
         </div>

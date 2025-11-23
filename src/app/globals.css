@@ -42,10 +42,10 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   
-  /* RunSpot Seoul Custom Colors */
-  --color-neon-green: #00FF88;
-  --color-neon-green-hover: #00E077;
-  --color-neon-green-dark: #00C766;
+  /* RunSpot Seoul Custom Colors - Light Theme */
+  --color-neon-green: #000000;
+  --color-neon-green-hover: #374151;
+  --color-neon-green-dark: #1f2937;
   --color-difficulty-easy: #22c55e;
   --color-difficulty-medium: #eab308;
   --color-difficulty-hard: #ef4444;
@@ -53,38 +53,38 @@
 
 :root {
   --radius: 0.625rem;
-  /* RunSpot Seoul Dark Theme - Force dark mode */
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #1a1a1a;
-  --card-foreground: #ffffff;
-  --popover: #1a1a1a;
-  --popover-foreground: #ffffff;
-  --primary: #00FF88;
-  --primary-foreground: #000000;
-  --secondary: #262626;
-  --secondary-foreground: #ffffff;
-  --muted: #262626;
-  --muted-foreground: #9ca3af;
-  --accent: #262626;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --border: #333333;
-  --input: #262626;
-  --ring: #00FF88;
-  --chart-1: #00FF88;
-  --chart-2: #22c55e;
-  --chart-3: #eab308;
-  --chart-4: #ef4444;
-  --chart-5: #9ca3af;
-  --sidebar: #1a1a1a;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #00FF88;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #262626;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #333333;
-  --sidebar-ring: #00FF88;
+  /* RunSpot Seoul Light Theme - White background with black text */
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #f8f9fa;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3f4;
+  --secondary-foreground: #000000;
+  --muted: #f1f3f4;
+  --muted-foreground: #6b7280;
+  --accent: #f1f3f4;
+  --accent-foreground: #000000;
+  --destructive: #dc2626;
+  --border: #e5e7eb;
+  --input: #f9fafb;
+  --ring: #000000;
+  --chart-1: #000000;
+  --chart-2: #374151;
+  --chart-3: #ca8a04;
+  --chart-4: #dc2626;
+  --chart-5: #6b7280;
+  --sidebar: #f8f9fa;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f3f4;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #000000;
 }
 
 @layer base {
@@ -110,7 +110,7 @@
     transform: scale(0.98);
   }
   
-  /* Custom scrollbar for dark theme */
+  /* Custom scrollbar for light theme */
   ::-webkit-scrollbar {
     width: 4px;
   }
@@ -120,12 +120,12 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 2px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.3);
   }
   
   /* Mobile-specific optimizations */
@@ -190,15 +190,15 @@
   
   /* Glass morphism effects */
   .glass {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
   }
   
-  /* Neon glow effect */
+  /* Black glow effect */
   .neon-glow {
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
   }
   
   /* Safe area handling for mobile */

@@ -95,11 +95,11 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
 
   if (permissionState === 'requesting') {
     return (
-      <div className="bg-gray-900/90 glass rounded-2xl p-6 border border-gray-800">
+      <div className="bg-card/90 glass rounded-2xl p-6 border border-border">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-4"></div>
-          <h3 className="text-lg font-semibold text-white mb-2">위치 정보 요청 중</h3>
-          <p className="text-gray-400 text-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">위치 정보 요청 중</h3>
+          <p className="text-muted-foreground text-sm">
             브라우저에서 위치 정보 접근을 허용해주세요
           </p>
         </div>
@@ -108,13 +108,13 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
   }
 
   return (
-    <div className="bg-gray-900/90 glass rounded-2xl p-6 border border-gray-800">
+    <div className="bg-card/90 glass rounded-2xl p-6 border border-border">
       <div className="text-center">
-        <MapPin className="w-12 h-12 text-[#00FF88] mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-white mb-2">위치 정보 필요</h3>
-        <p className="text-gray-400 text-sm mb-4">
+        <MapPin className="w-12 h-12 text-primary mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-foreground mb-2">위치 정보 필요</h3>
+        <p className="text-muted-foreground text-sm mb-4">
           런닝 경로 추적을 위해 위치 정보가 필요합니다.<br />
-          <span className="text-[#00FF88] font-medium">브라우저에서 위치 허용을 선택해주세요.</span>
+          <span className="text-primary font-medium">브라우저에서 위치 허용을 선택해주세요.</span>
         </p>
         
         {error && (
@@ -138,15 +138,15 @@ export default function LocationPermission({ onPermissionGranted, onPermissionDe
         
         <button
           onClick={getCurrentLocation}
-          className="bg-[#00FF88] hover:bg-[#00E077] text-black font-semibold px-6 py-3 rounded-xl transition-colors"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3 rounded-xl transition-colors"
         >
           위치 정보 허용
         </button>
         
-        <div className="mt-4 text-xs text-gray-500">
+        <div className="mt-4 text-xs text-muted-foreground/70">
           <p>• 위치 정보는 런닝 경로 추적에만 사용됩니다</p>
           <p>• 개인정보는 저장되지 않습니다</p>
-          <p className="mt-2 text-[#00FF88]">💡 모바일에서는 브라우저 설정에서 위치 권한을 허용해주세요</p>
+          <p className="mt-2 text-primary">💡 모바일에서는 브라우저 설정에서 위치 권한을 허용해주세요</p>
         </div>
       </div>
     </div>

@@ -10,10 +10,10 @@ import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
 const KakaoMap = dynamic(() => import('@/components/common/KakaoMap'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-64 bg-gray-900 rounded-2xl flex items-center justify-center">
+    <div className="w-full h-64 bg-muted rounded-2xl flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
-        <p className="text-gray-400 text-sm">지도 로딩 중...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+        <p className="text-muted-foreground text-sm">지도 로딩 중...</p>
       </div>
     </div>
   )
@@ -405,19 +405,19 @@ export default function Home() {
 
   return (
     <KakaoMapWrapper>
-      <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* 인증 가능 알림 배너 */}
       {userProfile?.id && (
         <AuthenticationBanner userId={userProfile.id} />
       )}
       
       {/* 상단 네비게이션 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border safe-top">
         <div className="flex items-center justify-between px-4 py-3 animate-fade-in-up">
           {/* 좌측: 로고만 */}
           <div>
-            <h1 className="text-lg font-bold text-[#00FF88]">RunSpot</h1>
-            <p className="text-xs text-gray-400">Seoul</p>
+            <h1 className="text-lg font-bold text-primary">RunSpot</h1>
+            <p className="text-xs text-muted-foreground">Seoul</p>
           </div>
           
           {/* 우측: 프로필 */}
@@ -430,28 +430,28 @@ export default function Home() {
             <div className="relative profile-dropdown">
               <button 
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                className="w-8 h-8 bg-[#00FF88] rounded-full flex items-center justify-center neon-glow hover:scale-110 transition-transform"
+                className="w-8 h-8 bg-primary rounded-full flex items-center justify-center neon-glow hover:scale-110 transition-transform"
               >
-                <User className="w-5 h-5 text-black" />
+                <User className="w-5 h-5 text-primary-foreground" />
               </button>
               
               {/* 드롭다운 메뉴 */}
               {showProfileDropdown && (
-                <div className="absolute right-0 top-12 w-48 bg-gray-900/95 backdrop-blur-xl border border-gray-700 rounded-2xl shadow-2xl z-50 animate-fade-in-up">
+                <div className="absolute right-0 top-12 w-48 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl z-50 animate-fade-in-up">
                   <div className="p-2">
                     <button
                       onClick={() => {
                         setShowProfileDropdown(false)
                         router.push('/profile')
                       }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-800/50 rounded-xl transition-colors"
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-xl transition-colors"
                     >
-                      <User className="w-4 h-4 text-[#00FF88]" />
-                      <span className="text-white">프로필 보기</span>
+                      <User className="w-4 h-4 text-primary" />
+                      <span className="text-foreground">프로필 보기</span>
                     </button>
                     <button
                       onClick={handleSignOut}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-gray-800/50 rounded-xl transition-colors text-red-400 hover:text-red-300"
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted/50 rounded-xl transition-colors text-destructive hover:text-destructive/80"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -469,12 +469,12 @@ export default function Home() {
 
       {/* 지도 섹션 */}
       <div className="px-4 pt-4 mb-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-        <div className="bg-gray-900/90 glass rounded-3xl overflow-hidden border border-gray-800 shadow-2xl">
-          <div className="p-4 border-b border-gray-800/50">
+        <div className="bg-card/90 glass rounded-3xl overflow-hidden border border-border shadow-2xl">
+          <div className="p-4 border-b border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-white">내 위치 주변</h2>
-                <p className="text-sm text-gray-400">
+                <h2 className="text-lg font-semibold text-foreground">내 위치 주변</h2>
+                <p className="text-sm text-muted-foreground">
                   {userLocation ? `${nearbyCourses.length}개의 코스를 찾았습니다` : '위치를 확인하는 중...'}
                 </p>
               </div>
@@ -482,14 +482,14 @@ export default function Home() {
                 <button 
                   onClick={moveToMyLocation}
                   disabled={locationLoading}
-                  className={`p-2 hover:bg-gray-800 rounded-xl transition-colors ${
+                  className={`p-2 hover:bg-muted rounded-xl transition-colors ${
                     locationLoading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   {locationLoading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#00FF88]"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                   ) : (
-                    <Navigation className="w-5 h-5 text-[#00FF88]" />
+                    <Navigation className="w-5 h-5 text-primary" />
                   )}
                 </button>
               </div>
@@ -523,18 +523,18 @@ export default function Home() {
             
             {/* 지도 위 오버레이 정보 */}
             {userLocation && (
-              <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md rounded-2xl px-3 py-2 z-10">
+              <div className="absolute top-3 left-3 bg-background/70 backdrop-blur-md rounded-2xl px-3 py-2 z-10">
                 <div className="flex items-center gap-2 text-sm">
-                  <span className="text-[#00FF88] font-semibold">
+                  <span className="text-primary font-semibold">
                     {nearbyCourses.length}개 코스
                   </span>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-gray-300">
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">
                     3km 반경
                   </span>
                   {locationAccuracy && (
                     <>
-                      <span className="text-gray-300">•</span>
+                      <span className="text-muted-foreground">•</span>
                       <span className={`text-xs ${
                         locationAccuracy < 20 ? 'text-green-400' : 
                         locationAccuracy < 100 ? 'text-yellow-400' : 'text-red-400'
@@ -557,7 +557,7 @@ export default function Home() {
           <h3 className="text-lg font-semibold">내 주변 코스</h3>
           <button 
             onClick={() => router.push('/running')}
-            className="text-[#00FF88] text-sm font-medium hover:text-[#00E077] transition-colors"
+            className="text-primary text-sm font-medium hover:text-primary/80 transition-colors"
           >
             전체보기
           </button>
@@ -567,15 +567,15 @@ export default function Home() {
           {loading ? (
             // 로딩 스켈레톤
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 animate-pulse">
+              <div key={index} className="bg-card/80 glass rounded-2xl p-4 border border-border animate-pulse">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-700 rounded-full"></div>
+                  <div className="w-12 h-12 bg-muted rounded-full"></div>
                   <div className="flex-1">
-                    <div className="h-4 bg-gray-700 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-700 rounded w-1/2 mb-2"></div>
-                    <div className="h-3 bg-gray-700 rounded w-3/4"></div>
+                    <div className="h-4 bg-muted rounded mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-1/2 mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-3/4"></div>
                   </div>
-                  <div className="w-10 h-10 bg-gray-700 rounded-xl"></div>
+                  <div className="w-10 h-10 bg-muted rounded-xl"></div>
                 </div>
               </div>
             ))
@@ -583,7 +583,7 @@ export default function Home() {
             nearbyCourses.map((course: any, index: number) => (
               <div 
                 key={course.id} 
-                className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 hover:border-gray-700 transition-all duration-300 hover:transform hover:scale-[1.02] animate-fade-in-up"
+                className="bg-card/80 glass rounded-2xl p-4 border border-border hover:border-border/70 transition-all duration-300 hover:transform hover:scale-[1.02] animate-fade-in-up"
                 style={{ animationDelay: `${0.4 + index * 0.1}s` }}
               >
                 <div className="flex items-center gap-4">
@@ -596,20 +596,20 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <div className="mb-1">
-                      <h4 className="font-semibold text-white">{course.name}</h4>
+                      <h4 className="font-semibold text-foreground">{course.name}</h4>
                     </div>
                     <div className="flex items-center gap-3 text-sm">
-                      <span className="text-gray-400">{course.area}</span>
-                      <span className="text-[#00FF88] font-medium">{course.distance}km</span>
+                      <span className="text-muted-foreground">{course.area}</span>
+                      <span className="text-primary font-medium">{course.distance}km</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <BookmarkButton courseId={course.id} />
                     <button 
                       onClick={() => router.push(`/running/start?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`)}
-                      className="p-3 bg-gray-800/80 rounded-xl hover:bg-[#00FF88] hover:text-black transition-all duration-300 group"
+                      className="p-3 bg-muted/80 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all duration-300 group"
                     >
-                      <Play className="w-4 h-4 text-[#00FF88] group-hover:text-black transition-colors" />
+                      <Play className="w-4 h-4 text-primary group-hover:text-primary-foreground transition-colors" />
                     </button>
                   </div>
                 </div>
@@ -618,12 +618,12 @@ export default function Home() {
           ) : (
             // 주변에 코스가 없을 때
             <div className="text-center py-8">
-              <MapPin className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400 mb-2">주변에 등록된 코스가 없습니다.</p>
-              <p className="text-sm text-gray-500">다른 지역의 코스를 탐색해보세요!</p>
+              <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-2">주변에 등록된 코스가 없습니다.</p>
+              <p className="text-sm text-muted-foreground/70">다른 지역의 코스를 탐색해보세요!</p>
               <button 
                 onClick={() => router.push('/running')}
-                className="mt-3 px-4 py-2 bg-[#00FF88] text-black rounded-lg hover:bg-[#00E077] transition-colors"
+                className="mt-3 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
                 코스 탐색하기
               </button>
@@ -633,41 +633,41 @@ export default function Home() {
       </div>
 
       {/* 하단 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-gray-800/50 safe-bottom">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-bottom">
         <div className="flex items-center justify-around py-2">
-          <button className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group">
-            <HomeIcon className="w-6 h-6 text-[#00FF88] group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-[#00FF88] font-medium">홈</span>
+          <button className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group">
+            <HomeIcon className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-primary font-medium">홈</span>
           </button>
           <button 
             onClick={() => router.push('/running')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+            className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group"
           >
             <div className="relative">
-              <Play className="w-6 h-6 text-gray-400 group-hover:text-[#00FF88] group-hover:scale-110 transition-all" />
+              <Play className="w-6 h-6 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all" />
             </div>
-            <span className="text-xs text-gray-400 group-hover:text-[#00FF88] transition-colors">런닝</span>
+            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">런닝</span>
           </button>
           <button 
             onClick={() => router.push('/spots')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+            className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group"
           >
-            <Store className="w-6 h-6 text-gray-400 group-hover:text-white group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-white transition-colors">스팟</span>
+            <Store className="w-6 h-6 text-muted-foreground group-hover:text-foreground group-hover:scale-110 transition-all" />
+            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">스팟</span>
           </button>
           <button 
             onClick={() => router.push('/saved')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+            className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group"
           >
-            <Bookmark className="w-6 h-6 text-gray-400 group-hover:text-white group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-white transition-colors">저장</span>
+            <Bookmark className="w-6 h-6 text-muted-foreground group-hover:text-foreground group-hover:scale-110 transition-all" />
+            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">저장</span>
           </button>
           <button 
             onClick={() => router.push('/profile')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+            className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group"
           >
-            <User className="w-6 h-6 text-gray-400 group-hover:text-white group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-white transition-colors">프로필</span>
+            <User className="w-6 h-6 text-muted-foreground group-hover:text-foreground group-hover:scale-110 transition-all" />
+            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">프로필</span>
           </button>
         </div>
       </div>
@@ -677,34 +677,34 @@ export default function Home() {
 
       {/* 회원가입 완료 안내 모달 */}
       {showSignupMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="bg-gray-900 rounded-3xl w-full max-w-sm border border-gray-800 shadow-2xl animate-fade-in-up relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm px-4">
+          <div className="bg-card rounded-3xl w-full max-w-sm border border-border shadow-2xl animate-fade-in-up relative">
             {/* 닫기 버튼 */}
             <button
               onClick={() => {
                 setShowSignupMessage(false)
                 router.push('/login')
               }}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors"
+              className="absolute top-4 right-4 p-2 hover:bg-muted rounded-xl transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
             
             <div className="p-6 text-center">
 
               {/* 아이콘 */}
               <div className="mb-4">
-                <Mail className="w-16 h-16 text-[#00FF88] mx-auto" />
+                <Mail className="w-16 h-16 text-primary mx-auto" />
               </div>
 
               {/* 제목 */}
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="text-xl font-bold text-foreground mb-2">
                 회원가입이 완료되었습니다!
               </h3>
 
               {/* 메시지 */}
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                <span className="text-[#00FF88] font-medium">{signupEmail}</span>로<br />
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                <span className="text-primary font-medium">{signupEmail}</span>로<br />
                 인증 이메일이 전송됩니다.<br />
                 인증 후 로그인이 가능합니다.
               </p>
@@ -715,7 +715,7 @@ export default function Home() {
                   setShowSignupMessage(false)
                   router.push('/login')
                 }}
-                className="w-full bg-[#00FF88] text-black font-semibold py-3 rounded-2xl hover:bg-[#00E077] transition-colors"
+                className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-2xl hover:bg-primary/90 transition-colors"
               >
                 확인
               </button>

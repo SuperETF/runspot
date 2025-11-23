@@ -42,8 +42,8 @@ export default function BookmarkButton({ courseId, className = '', showText = fa
       className={`
         flex items-center gap-1 p-2 rounded-xl transition-all duration-200
         ${isBookmarked 
-          ? 'bg-[#00FF88]/20 text-[#00FF88] hover:bg-[#00FF88]/30' 
-          : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
+          ? 'bg-primary/20 text-primary hover:bg-primary/30' 
+          : 'bg-muted/50 text-muted-foreground hover:bg-muted/80 hover:text-foreground'
         }
         ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}
         ${className}

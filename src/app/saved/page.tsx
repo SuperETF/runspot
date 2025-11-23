@@ -35,13 +35,13 @@ export default function SavedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 상단 헤더 - 모바일 알림창 피하기 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+            className="p-2 hover:bg-muted rounded-xl transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -54,7 +54,7 @@ export default function SavedPage() {
         {/* 로딩 상태 */}
         {loading && (
           <div className="flex justify-center items-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-[#00FF88]" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         )}
 
@@ -68,8 +68,8 @@ export default function SavedPage() {
         {/* 저장된 코스 개수 */}
         {!loading && (
           <div className="mb-6">
-            <p className="text-gray-400 text-sm">
-              총 <span className="text-[#00FF88] font-semibold">{bookmarks.length}개</span>의 코스를 저장했습니다
+            <p className="text-muted-foreground text-sm">
+              총 <span className="text-primary font-semibold">{bookmarks.length}개</span>의 코스를 저장했습니다
             </p>
           </div>
         )}
@@ -82,30 +82,31 @@ export default function SavedPage() {
               return (
               <div 
                 key={course.id}
-                className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 hover:border-gray-700 transition-all duration-300 animate-fade-in-up"
+                className="bg-card/80 glass rounded-2xl p-4 border border-border hover:border-border/70 transition-all duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-white">{course.name}</h3>
-                      <Bookmark className="w-4 h-4 text-[#00FF88] fill-current" />
+                      <h1 className="text-lg font-bold text-primary">RunSpot</h1>
+                      <h3 className="text-lg font-semibold text-foreground">{course.name}</h3>
+                      <Bookmark className="w-4 h-4 text-primary fill-current" />
                     </div>
-                    <p className="text-sm text-gray-400 mb-2">{course.area}</p>
+                    <p className="text-sm text-muted-foreground mb-2">{course.area}</p>
                     
                     {/* 코스 정보 */}
                     <div className="flex items-center gap-3 text-sm mb-3 flex-wrap">
                       <div className="flex items-center gap-1 whitespace-nowrap">
-                        <MapPin className="w-4 h-4 text-[#00FF88] flex-shrink-0" />
-                        <span className="text-[#00FF88] font-medium">{course.distance}km</span>
+                        <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span className="text-primary font-medium">{course.distance}km</span>
                       </div>
                       <div className="flex items-center gap-1 whitespace-nowrap">
-                        <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-300">{course.duration}분</span>
+                        <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-foreground">{course.duration}분</span>
                       </div>
                       <div className="flex items-center gap-1 whitespace-nowrap">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current flex-shrink-0" />
-                        <span className="text-gray-300">{course.rating_avg}</span>
+                        <span className="text-yellow-400">⭐</span>
+                        <span className="text-foreground">{course.rating_avg}</span>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0 ${getDifficultyColor(course.difficulty)}`}>
                         {getDifficultyText(course.difficulty)}
@@ -113,7 +114,7 @@ export default function SavedPage() {
                     </div>
 
                     {/* 저장 날짜 */}
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       {new Date(bookmark.created_at).toLocaleDateString('ko-KR')} 저장
                     </p>
                   </div>
@@ -127,16 +128,16 @@ export default function SavedPage() {
                     }}
                     className="p-2 hover:bg-red-500/20 rounded-xl transition-colors group ml-2"
                   >
-                    <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-400 transition-colors" />
+                    <Trash2 className="w-4 h-4 text-muted-foreground group-hover:text-red-400 transition-colors" />
                   </button>
                 </div>
 
                 {/* 액션 버튼들 */}
                 <div className="flex gap-2">
-                  <button className="flex-1 bg-gray-800/80 hover:bg-[#00FF88] hover:text-black text-white py-2 px-4 rounded-xl transition-all duration-300 font-medium">
+                  <button className="flex-1 bg-muted/80 hover:bg-primary hover:text-primary-foreground text-foreground py-2 px-4 rounded-xl transition-all duration-300 font-medium">
                     코스 보기
                   </button>
-                  <button className="flex-1 bg-[#00FF88] hover:bg-[#00E077] text-black py-2 px-4 rounded-xl transition-all duration-300 font-medium">
+                  <button className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2 px-4 rounded-xl transition-all duration-300 font-medium">
                     런닝 시작
                   </button>
                 </div>
@@ -146,14 +147,14 @@ export default function SavedPage() {
         ) : (
           /* 빈 상태 */
           <div className="text-center py-16">
-            <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bookmark className="w-10 h-10 text-gray-600" />
+            <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <Bookmark className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">저장된 코스가 없습니다</h3>
-            <p className="text-gray-400 mb-6">마음에 드는 코스를 저장해보세요!</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">저장된 코스가 없습니다</h3>
+            <p className="text-muted-foreground mb-6">마음에 드는 코스를 저장해보세요!</p>
             <button 
               onClick={() => router.push('/')}
-              className="bg-[#00FF88] hover:bg-[#00E077] text-black font-semibold px-6 py-3 rounded-xl transition-colors"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3 rounded-xl transition-colors"
             >
               코스 둘러보기
             </button>

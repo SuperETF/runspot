@@ -1145,7 +1145,7 @@ export default function RunningMap({
           exit={{ opacity: 0, y: -20 }}
         >
           <div className="bg-blue-600/95 backdrop-blur-sm rounded-lg px-4 py-3 border border-blue-500">
-            <div className="flex items-center gap-3 text-white">
+            <div className="flex items-center gap-3 text-primary-foreground">
               <div className="text-2xl">
                 {kakaoNavService.getTurnIcon(currentTurnInstruction.turnType)}
               </div>
@@ -1159,7 +1159,7 @@ export default function RunningMap({
               </div>
               <button
                 onClick={stopInAppNavigation}
-                className="text-blue-200 hover:text-white text-xs px-2 py-1 rounded"
+                className="text-blue-200 hover:text-primary-foreground text-xs px-2 py-1 rounded"
               >
                 종료
               </button>
@@ -1177,7 +1177,7 @@ export default function RunningMap({
           exit={{ opacity: 0, y: -20 }}
         >
           <div className="bg-red-600/95 backdrop-blur-sm rounded-lg px-4 py-2 border border-red-500">
-            <div className="flex items-center gap-2 text-white text-sm">
+            <div className="flex items-center gap-2 text-primary-foreground text-sm">
               <svg className="w-4 h-4 text-yellow-300" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z"/>
               </svg>
@@ -1191,26 +1191,26 @@ export default function RunningMap({
       {/* 보행자 네비게이션 MVP: 진행률 표시 (런닝 모드에서 표시) */}
       {mode === 'running' && pedestrianProgress && (
         <div className="absolute top-4 left-4 right-4 z-10">
-          <div className="bg-black/90 backdrop-blur-sm rounded-lg px-4 py-3 border border-gray-700">
+          <div className="bg-card/90 backdrop-blur-sm rounded-lg px-4 py-3 border border-border">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-white text-sm font-medium">
+              <div className="text-foreground text-sm font-medium">
                 진행률: {pedestrianProgress.progressPercent.toFixed(1)}%
               </div>
-              <div className="text-[#00FF88] text-sm">
+              <div className="text-primary text-sm">
                 {((pedestrianProgress.totalDistance - pedestrianProgress.passedDistance) / 1000).toFixed(2)}km 남음
               </div>
             </div>
             
             {/* 진행률 바 */}
-            <div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="w-full bg-muted rounded-full h-2">
               <div 
-                className="bg-[#00FF88] h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${pedestrianProgress.progressPercent}%` }}
               />
             </div>
             
             {/* 거리 정보 */}
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-300">
+            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
               <div>
                 통과: {(pedestrianProgress.passedDistance / 1000).toFixed(2)}km
               </div>
@@ -1240,7 +1240,7 @@ export default function RunningMap({
           {/* 내 위치 버튼 */}
           <button
             onClick={moveToCurrentLocation}
-            className="px-3 py-2 rounded-lg shadow-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+            className="px-3 py-2 rounded-lg shadow-lg bg-blue-500 text-primary-foreground text-sm font-medium hover:bg-blue-600 transition-colors"
           >
             내위치
           </button>
@@ -1255,7 +1255,7 @@ export default function RunningMap({
                 map.setLevel(3)
               }
             }}
-            className="px-3 py-2 rounded-lg shadow-lg bg-green-500 text-white text-sm font-medium hover:bg-green-600 transition-colors"
+            className="px-3 py-2 rounded-lg shadow-lg bg-green-500 text-primary-foreground text-sm font-medium hover:bg-green-600 transition-colors"
           >
             시작점
           </button>
@@ -1272,8 +1272,8 @@ export default function RunningMap({
             onClick={() => setIsNavigationMode(!isNavigationMode)}
             className={`w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 ${
               isNavigationMode 
-                ? 'bg-blue-500 border-blue-500 text-white' 
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                ? 'bg-blue-500 border-blue-500 text-primary-foreground' 
+                : 'bg-background border-border text-muted-foreground hover:bg-muted'
             }`}
             title={isNavigationMode ? '네비게이션 모드 종료' : '네비게이션 모드 시작'}
           >
@@ -1286,7 +1286,7 @@ export default function RunningMap({
           {/* 전체 화면 네비게이션 버튼 */}
           <button
             onClick={startFullScreenNavigation}
-            className="w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-purple-600 border-purple-600 text-white hover:bg-purple-700"
+            className="w-12 h-12 rounded-full shadow-lg border-2 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 bg-purple-600 border-purple-600 text-primary-foreground hover:bg-purple-700"
             title="전체 화면 네비게이션"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1300,14 +1300,14 @@ export default function RunningMap({
       {mode !== 'running' && (
         <div className="absolute top-4 right-4 flex items-center gap-2">
           {/* GPS 상태 */}
-          <div className="bg-black/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-gray-800">
+          <div className="bg-card/80 backdrop-blur-sm rounded-xl px-3 py-2 border border-border">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${
                 locationPermission === 'granted' 
-                  ? (isRunning ? 'bg-[#00FF88] animate-pulse' : 'bg-green-500')
+                  ? (isRunning ? 'bg-primary animate-pulse' : 'bg-green-500')
                   : 'bg-red-500'
               }`}></div>
-              <span className="text-xs text-white">
+              <span className="text-xs text-foreground">
                 {locationPermission === 'granted' 
                   ? (isRunning ? 'GPS 추적 중' : 'GPS 준비됨')
                   : '위치 권한 없음'
@@ -1320,10 +1320,10 @@ export default function RunningMap({
           {locationPermission === 'granted' && (
             <button
               onClick={moveToCurrentLocation}
-              className="bg-black/80 backdrop-blur-sm rounded-xl p-2 border border-gray-800 hover:bg-gray-800/80 transition-colors"
+              className="bg-card/80 backdrop-blur-sm rounded-xl p-2 border border-border hover:bg-muted/80 transition-colors"
               title="내 위치로 이동"
             >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -1347,15 +1347,15 @@ export default function RunningMap({
       {/* 대기 모드 전용 UI - 좌측 하단 작은 카드 */}
       {mode === 'waiting' && (
         <div className="absolute bottom-4 left-4">
-          <div className="bg-black/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-600 shadow-lg">
+          <div className="bg-card/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-border shadow-lg">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#00FF88] rounded-full animate-pulse"></div>
-              <div className="text-xs text-white">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <div className="text-xs text-foreground">
                 GPS 추적 중
               </div>
             </div>
             {userLocation && courseRoute.length > 0 && distanceToStart !== null && (
-              <div className={`text-xs mt-1 ${isAtStartPoint ? 'text-[#00FF88]' : 'text-gray-300'}`}>
+              <div className={`text-xs mt-1 ${isAtStartPoint ? 'text-primary' : 'text-muted-foreground'}`}>
                 시작점까지 {(distanceToStart * 1000).toFixed(0)}m
                 {isAtStartPoint && ' ✅'}
               </div>

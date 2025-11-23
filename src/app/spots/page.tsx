@@ -23,7 +23,7 @@ function ImageSlider({ images, spotName }: { images: string[], spotName: string 
   if (!images || images.length === 0) return null
 
   return (
-    <div className="relative w-full h-48 bg-gray-800 rounded-xl overflow-hidden">
+    <div className="relative w-full h-48 bg-muted rounded-xl overflow-hidden">
       <img
         src={images[currentIndex]}
         alt={`${spotName} 전경 ${currentIndex + 1}`}
@@ -37,7 +37,7 @@ function ImageSlider({ images, spotName }: { images: string[], spotName: string 
             onClick={prevImage}
             className="absolute left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
           >
-            <ChevronLeft className="w-5 h-5 text-white" />
+            <ChevronLeft className="w-5 h-5 text-foreground" />
           </button>
           
           {/* 다음 버튼 */}
@@ -45,7 +45,7 @@ function ImageSlider({ images, spotName }: { images: string[], spotName: string 
             onClick={nextImage}
             className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
           >
-            <ChevronRight className="w-5 h-5 text-white" />
+            <ChevronRight className="w-5 h-5 text-foreground" />
           </button>
           
           {/* 인디케이터 */}
@@ -142,19 +142,24 @@ export default function SpotsPage() {
     setLoading(true)
     try {
       let spotsData
-      if (userLocation) {
-        // 위치가 있으면 주변 스팟 조회
+      if (selectedCategory === 'all') {
+        // 전체 선택 시 위치와 관계없이 모든 스팟 조회
+        spotsData = await getSpots()
+      } else if (userLocation) {
+        // 특정 카테고리 + 위치가 있으면 주변 스팟 조회
         spotsData = await getNearbySpots(
           userLocation.lat, 
           userLocation.lng, 
           3, // 3km 반경
-          selectedCategory === 'all' ? undefined : selectedCategory
+          selectedCategory
         )
       } else {
-        // 위치가 없으면 전체 스팟 조회
-        spotsData = await getSpots(selectedCategory === 'all' ? undefined : selectedCategory)
+        // 특정 카테고리 + 위치 없으면 전체 스팟에서 카테고리 필터링
+        spotsData = await getSpots(selectedCategory)
       }
       
+      console.log('로딩된 스팟 데이터:', spotsData)
+      console.log('선택된 카테고리:', selectedCategory)
       setSpots(spotsData as any)
     } catch (error) {
       console.error('스팟 로딩 오류:', error)
@@ -531,13 +536,13 @@ export default function SpotsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 상단 헤더 - 모바일 알림창 피하기 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}
-            className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+            className="p-2 hover:bg-muted rounded-xl transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -549,11 +554,11 @@ export default function SpotsPage() {
       <div className="px-4 py-6 space-y-6">
         {/* 헤더 섹션 */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-[#00FF88] rounded-full flex items-center justify-center mx-auto mb-4">
-            <MapPin className="w-8 h-8 text-black" />
+          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🏪</span>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">런 - 스팟</h2>
-          <p className="text-gray-400">러너들을 위한 혜택을 제공하는 파트너 매장들</p>
+          <h2 className="text-xl font-bold text-foreground mb-2">런 - 스팟</h2>
+          <p className="text-muted-foreground">러너들을 위한 혜택을 제공하는 파트너 매장들</p>
         </div>
 
 
@@ -565,8 +570,8 @@ export default function SpotsPage() {
               onClick={() => setSelectedCategory(category.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all ${
                 selectedCategory === category.id
-                  ? 'bg-[#00FF88] text-black font-medium'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-card text-black font-medium'
+                  : 'bg-muted text-foreground hover:bg-muted/80'
               }`}
             >
               <span>{category.icon}</span>
@@ -577,7 +582,7 @@ export default function SpotsPage() {
 
         {/* 스팟 목록 */}
         <div>
-          <p className="text-gray-400 text-sm mb-4">
+          <p className="text-muted-foreground text-sm mb-4">
             {loading ? '로딩 중...' : `${spots.length}개의 제휴 스팟`}
           </p>
 
@@ -585,13 +590,13 @@ export default function SpotsPage() {
             // 로딩 스켈레톤
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 animate-pulse">
+                <div key={index} className="bg-card/80 glass rounded-2xl p-4 border border-border animate-pulse">
                   <div className="flex gap-4">
-                    <div className="w-16 h-16 bg-gray-700 rounded-xl"></div>
+                    <div className="w-16 h-16 bg-muted/80 rounded-xl"></div>
                     <div className="flex-1">
-                      <div className="h-4 bg-gray-700 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-700 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                      <div className="h-4 bg-muted/80 rounded mb-2"></div>
+                      <div className="h-3 bg-muted/80 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-muted/80 rounded w-1/2"></div>
                     </div>
                   </div>
                 </div>
@@ -606,12 +611,12 @@ export default function SpotsPage() {
                     setDetailSpot(spot)
                     setShowDetailModal(true)
                   }}
-                  className="bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 hover:border-gray-700 transition-all duration-300 animate-fade-in-up cursor-pointer"
+                  className="bg-card/80 glass rounded-2xl p-4 border border-border hover:border-gray-700 transition-all duration-300 animate-fade-in-up cursor-pointer"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <div className="flex items-start gap-3 mb-3">
                     {/* 로고 */}
-                    <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center text-lg overflow-hidden flex-shrink-0">
                       {(spot as any).logo_url ? (
                         <img 
                           src={(spot as any).logo_url} 
@@ -626,18 +631,18 @@ export default function SpotsPage() {
                     {/* 스팟 정보 */}
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-semibold text-white">{spot.name}</h3>
-                        <span className="text-sm text-gray-400">{(spot as any).distance || '0'}km</span>
+                        <h3 className="font-semibold text-foreground">{spot.name}</h3>
+                        <span className="text-sm text-muted-foreground">{(spot as any).distance || '0'}km</span>
                       </div>
                       
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm text-gray-300">{spot.signature_menu}</span>
+                        <span className="text-sm text-foreground">{spot.signature_menu}</span>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation()
                             handleRunToSpot(spot)
                           }}
-                          className="flex items-center justify-center gap-1 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white py-1 px-2 rounded-lg transition-colors text-xs ml-auto"
+                          className="flex items-center justify-center gap-1 bg-muted/80 hover:bg-muted/70 text-foreground hover:text-foreground py-1 px-2 rounded-lg transition-colors text-xs ml-auto"
                         >
                           <Play className="w-3 h-3" />
                           뛰어가기
@@ -646,11 +651,11 @@ export default function SpotsPage() {
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-400 mb-3">{spot.description}</p>
+                  <p className="text-sm text-muted-foreground mb-3">{spot.description}</p>
                   
                   <div className="flex items-center justify-between">
-                    <div className="bg-[#00FF88]/10 border border-[#00FF88]/20 rounded-lg px-3 py-1">
-                      <p className="text-[#00FF88] text-sm font-medium">
+                    <div className="bg-card/10 border border-gray-900/20 rounded-lg px-3 py-1">
+                      <p className="text-muted-foreground text-sm font-medium">
                         🎁 완주시 {spot.special_offer || `${spot.discount_percentage}% 할인`}
                       </p>
                     </div>
@@ -662,8 +667,8 @@ export default function SpotsPage() {
                       }}
                       className={`font-medium py-2 px-4 rounded-xl transition-colors text-sm ${
                         getSpotAuthStatus(spot.id) === 'active'
-                          ? 'bg-gray-600 text-gray-300 cursor-default'
-                          : 'bg-[#00FF88] hover:bg-[#00E077] text-black'
+                          ? 'bg-muted/70 text-foreground cursor-default'
+                          : 'bg-card hover:bg-muted text-black'
                       }`}
                     >
                       {getButtonText(spot.id)}
@@ -675,9 +680,9 @@ export default function SpotsPage() {
           ) : (
             // 빈 상태
             <div className="text-center py-8">
-              <MapPin className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400 mb-2">해당 카테고리의 제휴 스팟이 없습니다</p>
-              <p className="text-sm text-gray-500">다른 카테고리를 확인해보세요!</p>
+              <MapPin className="w-12 h-12 text-foreground/70 mx-auto mb-3" />
+              <p className="text-muted-foreground mb-2">해당 카테고리의 제휴 스팟이 없습니다</p>
+              <p className="text-sm text-foreground/60">다른 카테고리를 확인해보세요!</p>
             </div>
           )}
         </div>
@@ -689,18 +694,18 @@ export default function SpotsPage() {
       {/* 쿠폰 모달 */}
       {showCouponModal && couponData && selectedSpot && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-3xl p-6 max-w-sm w-full border border-gray-800 relative overflow-hidden">
+          <div className="bg-card rounded-3xl p-6 max-w-sm w-full border border-border relative overflow-hidden">
             {/* 배경 패턴 */}
             <div className="absolute inset-0 opacity-5">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#00FF88] to-transparent"></div>
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-gray-900 to-transparent"></div>
             </div>
             
             {/* 닫기 버튼 */}
             <button 
               onClick={() => setShowCouponModal(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors z-10"
+              className="absolute top-4 right-4 p-2 hover:bg-muted rounded-xl transition-colors z-50"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
 
             <div className="relative z-10">
@@ -708,24 +713,24 @@ export default function SpotsPage() {
                 <>
                   {/* 성공 아이콘 */}
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-[#00FF88] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                    <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                       <CheckCircle className="w-8 h-8 text-black" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">인증 완료!</h3>
-                    <p className="text-gray-400 text-sm">완주 인증이 성공적으로 완료되었습니다</p>
+                    <h3 className="text-xl font-bold text-foreground mb-2">인증 완료!</h3>
+                    <p className="text-muted-foreground text-sm">완주 인증이 성공적으로 완료되었습니다</p>
                   </div>
 
                   {/* 쿠폰 정보 */}
-                  <div className="bg-gradient-to-r from-[#00FF88]/20 to-[#00FF88]/10 border border-[#00FF88]/30 rounded-2xl p-4 mb-4">
+                  <div className="bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-2xl p-4 mb-4">
                     <div className="text-center">
-                      <h4 className="text-lg font-semibold text-white mb-1">{selectedSpot.name}</h4>
-                      <p className="text-[#00FF88] font-medium text-lg mb-3">{couponData.discount}</p>
+                      <h4 className="text-lg font-semibold text-foreground mb-1">{selectedSpot.name}</h4>
+                      <p className="text-primary font-medium text-lg mb-3">{couponData.discount}</p>
                       
                       {/* 유효시간 강조 */}
                       <div className="bg-black/30 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-gray-400">발급일시</p>
-                          <p className="text-xs text-white">
+                          <p className="text-xs text-muted-foreground">발급일시</p>
+                          <p className="text-xs text-foreground">
                             {couponData.issuedAt.toLocaleString('ko-KR', {
                               month: 'short',
                               day: 'numeric',
@@ -736,8 +741,8 @@ export default function SpotsPage() {
                           </p>
                         </div>
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs text-gray-400">만료시간</p>
-                          <p className="text-xs text-white">
+                          <p className="text-xs text-muted-foreground">만료시간</p>
+                          <p className="text-xs text-foreground">
                             {couponData.expiresAt.toLocaleString('ko-KR', {
                               month: 'short',
                               day: 'numeric',
@@ -747,8 +752,8 @@ export default function SpotsPage() {
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400 mb-1">유효시간</p>
-                          <p className="text-[#00FF88] font-bold text-xl">
+                          <p className="text-xs text-muted-foreground mb-1">유효시간</p>
+                          <p className="text-primary font-bold text-xl">
                             {getRemainingTime(couponData.expiresAt)}
                           </p>
                         </div>
@@ -758,11 +763,11 @@ export default function SpotsPage() {
 
 
                   {/* 사용 안내 */}
-                  <div className="bg-gray-800/50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 text-center">
+                  <div className="bg-muted/50 rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground text-center">
                       매장에서 이 화면을 보여주세요<br/>
                       2시간 후 자동으로 만료됩니다<br/>
-                      <span className="text-gray-500">스크린샷은 인정되지 않습니다</span>
+                      <span className="text-foreground/60">스크린샷은 인정되지 않습니다</span>
                     </p>
                   </div>
                 </>
@@ -778,19 +783,19 @@ export default function SpotsPage() {
       {/* 스팟 상세 모달 */}
       {showDetailModal && detailSpot && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-3xl p-6 max-w-md w-full border border-gray-800 relative max-h-[80vh] overflow-y-auto scrollbar-hide">
+          <div className="bg-card rounded-3xl p-6 max-w-md w-full border border-border relative max-h-[80vh] overflow-y-auto scrollbar-hide">
             {/* 닫기 버튼 */}
             <button 
               onClick={() => setShowDetailModal(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors z-10"
+              className="absolute top-4 right-4 p-2 hover:bg-muted rounded-xl transition-colors z-10"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
 
             <div className="text-center">
               {/* 헤더 */}
               <div className="mb-6">
-                <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl overflow-hidden">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-3 text-2xl overflow-hidden">
                   {(detailSpot as any).logo_url ? (
                     <img 
                       src={(detailSpot as any).logo_url} 
@@ -801,8 +806,8 @@ export default function SpotsPage() {
                     getCategoryIcon(detailSpot.category)
                   )}
                 </div>
-                <h2 className="text-xl font-bold text-white mb-1">{detailSpot.name}</h2>
-                <p className="text-gray-400">{detailSpot.signature_menu}</p>
+                <h2 className="text-xl font-bold text-foreground mb-1">{detailSpot.name}</h2>
+                <p className="text-muted-foreground">{detailSpot.signature_menu}</p>
               </div>
 
               {/* 전경사진 슬라이더 */}
@@ -815,18 +820,18 @@ export default function SpotsPage() {
               {/* 기본 정보 */}
               <div className="space-y-4 mb-6 text-left">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-2">소개</h3>
-                  <p className="text-gray-400">{detailSpot.description}</p>
+                  <h3 className="text-sm font-medium text-foreground mb-2">소개</h3>
+                  <p className="text-muted-foreground">{detailSpot.description}</p>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-2">위치 정보</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-2">위치 정보</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-400">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="w-4 h-4" />
                       <span>{detailSpot.address}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-400">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Navigation className="w-4 h-4" />
                       <span>{(detailSpot as any).distance || '0'}km 거리</span>
                     </div>
@@ -834,13 +839,13 @@ export default function SpotsPage() {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-gray-300 mb-2">운영 정보</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-2">운영 정보</h3>
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-400">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span>{formatOperatingTime(detailSpot.open_time)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-400">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <Phone className="w-4 h-4" />
                       <span>{detailSpot.phone || '전화번호 미등록'}</span>
                     </div>
@@ -848,9 +853,9 @@ export default function SpotsPage() {
                 </div>
 
                 {/* 혜택 정보 */}
-                <div className="bg-[#00FF88]/10 border border-[#00FF88]/20 rounded-xl p-4">
-                  <h3 className="text-[#00FF88] font-medium mb-2">🎁 런스팟 혜택</h3>
-                  <p className="text-white">
+                <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                  <h3 className="text-primary font-medium mb-2">🎁 런스팟 혜택</h3>
+                  <p className="text-foreground">
                     완주시 {detailSpot.special_offer || `${detailSpot.discount_percentage}% 할인`}
                   </p>
                 </div>
@@ -864,8 +869,8 @@ export default function SpotsPage() {
                 }}
                 className={`w-full font-bold py-3 px-4 rounded-xl transition-colors ${
                   getSpotAuthStatus(detailSpot.id) === 'active'
-                    ? 'bg-gray-600 text-gray-300 cursor-default'
-                    : 'bg-[#00FF88] hover:bg-[#00E077] text-black'
+                    ? 'bg-muted/70 text-foreground cursor-default'
+                    : 'bg-primary hover:bg-primary/90 text-black'
                 }`}
               >
                 {getSpotAuthStatus(detailSpot.id) === 'active' ? '인증 완료' : '완주 인증하기'}
@@ -878,10 +883,10 @@ export default function SpotsPage() {
 {/* 쿠폰 모달 */}
 {showCouponModal && couponData && selectedSpot && (
 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div className="bg-gray-900 rounded-3xl p-6 max-w-sm w-full border border-gray-800 relative overflow-hidden">
+  <div className="bg-card rounded-3xl p-6 max-w-sm w-full border border-border relative overflow-hidden">
     {/* 배경 패턴 */}
     <div className="absolute inset-0 opacity-5">
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#00FF88] to-transparent"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary to-transparent"></div>
     </div>
     
     {/* 닫기 버튼 */}
@@ -896,9 +901,9 @@ export default function SpotsPage() {
           }))
         }
       }}
-      className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors z-50"
+      className="absolute top-4 right-4 p-2 hover:bg-muted rounded-xl transition-colors z-50"
     >
-      <X className="w-5 h-5 text-gray-400" />
+      <X className="w-5 h-5 text-muted-foreground" />
     </button>
 
     <div className="relative z-10">
@@ -906,24 +911,24 @@ export default function SpotsPage() {
         <>
           {/* 성공 아이콘 */}
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-[#00FF88] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
               <CheckCircle className="w-8 h-8 text-black" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">인증 완료!</h3>
-            <p className="text-gray-400 text-sm">완주 인증이 성공적으로 완료되었습니다</p>
+            <h3 className="text-xl font-bold text-foreground mb-2">인증 완료!</h3>
+            <p className="text-muted-foreground text-sm">완주 인증이 성공적으로 완료되었습니다</p>
           </div>
 
           {/* 쿠폰 정보 */}
-          <div className="bg-gradient-to-r from-[#00FF88]/20 to-[#00FF88]/10 border border-[#00FF88]/30 rounded-2xl p-4 mb-4">
+          <div className="bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-2xl p-4 mb-4">
             <div className="text-center">
-              <h4 className="text-lg font-semibold text-white mb-1">{selectedSpot.name}</h4>
-              <p className="text-[#00FF88] font-medium text-lg mb-3">{couponData.discount}</p>
+              <h4 className="text-lg font-semibold text-foreground mb-1">{selectedSpot.name}</h4>
+              <p className="text-primary font-medium text-lg mb-3">{couponData.discount}</p>
               
               {/* 유효시간 강조 */}
               <div className="bg-black/30 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-gray-400">발급일시</p>
-                  <p className="text-xs text-white">
+                  <p className="text-xs text-muted-foreground">발급일시</p>
+                  <p className="text-xs text-foreground">
                     {couponData.issuedAt.toLocaleString('ko-KR', {
                       month: 'short',
                       day: 'numeric',
@@ -934,8 +939,8 @@ export default function SpotsPage() {
                   </p>
                 </div>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs text-gray-400">만료시간</p>
-                  <p className="text-xs text-white">
+                  <p className="text-xs text-muted-foreground">만료시간</p>
+                  <p className="text-xs text-foreground">
                     {couponData.expiresAt.toLocaleString('ko-KR', {
                       month: 'short',
                       day: 'numeric',
@@ -945,8 +950,8 @@ export default function SpotsPage() {
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-gray-400 mb-1">유효시간</p>
-                  <p className="text-[#00FF88] font-bold text-xl">
+                  <p className="text-xs text-muted-foreground mb-1">유효시간</p>
+                  <p className="text-primary font-bold text-xl">
                     {getRemainingTime(couponData.expiresAt)}
                   </p>
                 </div>
@@ -956,8 +961,8 @@ export default function SpotsPage() {
 
 
           {/* 사용 안내 */}
-          <div className="bg-gray-800/50 rounded-xl p-3 mb-4">
-            <p className="text-xs text-gray-400 text-center">
+          <div className="bg-muted/50 rounded-xl p-3 mb-4">
+            <p className="text-xs text-muted-foreground text-center">
               이 화면을 매장에서 보여주세요<br/>
               스크린샷은 인정되지 않습니다
             </p>
@@ -969,7 +974,7 @@ export default function SpotsPage() {
               setShowCouponModal(false)
               router.push('/spots/history')
             }}
-            className="w-full bg-[#00FF88] hover:bg-[#00E077] text-black font-medium py-3 px-4 rounded-xl transition-colors"
+            className="w-full bg-primary hover:bg-primary/90 text-black font-medium py-3 px-4 rounded-xl transition-colors"
           >
             인증 완료 내역 보기
           </button>
@@ -979,10 +984,10 @@ export default function SpotsPage() {
           {/* 만료된 쿠폰 */}
           <div className="text-center">
             <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <X className="w-8 h-8 text-white" />
+              <X className="w-8 h-8 text-foreground" />
             </div>
             <h3 className="text-xl font-bold text-red-400 mb-2">만료된 인증입니다</h3>
-            <p className="text-gray-400 text-sm mb-4">이 쿠폰은 유효시간이 지났습니다</p>
+            <p className="text-muted-foreground text-sm mb-4">이 쿠폰은 유효시간이 지났습니다</p>
             
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
               <p className="text-red-400 text-sm">
@@ -998,18 +1003,18 @@ export default function SpotsPage() {
 )}
 
       {/* 하단 탭 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-gray-800/50 safe-bottom">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/50 safe-bottom">
         <div className="flex items-center justify-around py-2">
-          <button className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group">
-            <MapPin className="w-6 h-6 text-[#00FF88] group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-[#00FF88] font-medium">스팟</span>
+          <button className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group">
+            <MapPin className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-primary font-medium">스팟</span>
           </button>
           <button 
             onClick={() => router.push('/spots/history')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+            className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group"
           >
-            <Clock className="w-6 h-6 text-gray-400 group-hover:text-[#00FF88] group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-[#00FF88] transition-colors">인증 내역</span>
+            <Clock className="w-6 h-6 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all" />
+            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">인증 내역</span>
           </button>
         </div>
       </div>

@@ -10,10 +10,10 @@ import NavigationGuide from '@/components/common/NavigationGuide'
 const RunningMap = dynamic(() => import('@/components/common/RunningMapAdvanced'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-64 bg-gray-900 rounded-2xl flex items-center justify-center">
+    <div className="w-full h-64 bg-muted rounded-2xl flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
-        <p className="text-gray-400 text-sm">지도 로딩 중...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+        <p className="text-muted-foreground text-sm">지도 로딩 중...</p>
       </div>
     </div>
   )
@@ -499,9 +499,9 @@ function RunningStartContent() {
                 <div className="bg-gray-900 rounded-2xl p-4 border border-gray-800">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <div className="text-white">
+                    <div className="text-foreground">
                       <div className="text-sm font-medium">위치 추적 중</div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-muted-foreground">
                         추적 포인트: {userPath.length}개 | 총 거리: {calculateTotalPathDistance(userPath).toFixed(2)}km
                       </div>
                     </div>
@@ -533,8 +533,8 @@ function RunningStartContent() {
 export default function RunningStartPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FF88]"></div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     }>
       <RunningStartContent />

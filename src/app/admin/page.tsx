@@ -27,17 +27,17 @@ export default function AdminPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 헤더 */}
-      <div className="bg-gray-900 border-b border-gray-800">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#00FF88]">RunSpot Admin</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-primary">RunSpot Admin</h1>
             </div>
             <button
               onClick={() => router.push('/')}
-              className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+              className="px-3 py-2 sm:px-4 text-sm sm:text-base bg-muted hover:bg-muted/80 rounded-lg transition-colors"
             >
               메인으로
             </button>
@@ -57,8 +57,8 @@ export default function AdminPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex flex-col items-center p-4 rounded-xl transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-[#00FF88] text-black'
-                      : 'bg-gray-800 hover:bg-gray-700 text-white'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted hover:bg-muted/80 text-foreground'
                   }`}
                 >
                   <Icon className="w-6 h-6 mb-2" />
@@ -82,8 +82,8 @@ export default function AdminPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-[#00FF88] text-black'
-                        : 'bg-gray-800 hover:bg-gray-700 text-white'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted hover:bg-muted/80 text-foreground'
                     }`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
@@ -249,7 +249,7 @@ function CoursesTab() {
           className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
-            <Map className="w-6 h-6 sm:w-8 sm:h-8 text-[#00FF88] mr-3" />
+            <Map className="w-6 h-6 sm:w-8 sm:h-8 text-primary mr-3" />
             <h3 className="text-base sm:text-lg font-semibold">지도 클릭 모드</h3>
           </div>
           <p className="text-gray-400 mb-3 sm:mb-4 text-sm sm:text-base">
@@ -267,7 +267,7 @@ function CoursesTab() {
           className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
-            <Route className="w-6 h-6 sm:w-8 sm:h-8 text-[#00FF88] mr-3" />
+            <Route className="w-6 h-6 sm:w-8 sm:h-8 text-primary mr-3" />
             <h3 className="text-base sm:text-lg font-semibold">GPS 추적 모드</h3>
           </div>
           <p className="text-gray-400 mb-3 sm:mb-4 text-sm sm:text-base">
@@ -285,8 +285,8 @@ function CoursesTab() {
           className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#00FF88] rounded-lg flex items-center justify-center mr-3">
-              <span className="text-black font-bold text-xs sm:text-sm">H</span>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+              <span className="text-primary-foreground font-bold text-xs sm:text-sm">H</span>
             </div>
             <h3 className="text-base sm:text-lg font-semibold">하이브리드 모드</h3>
           </div>
@@ -337,8 +337,8 @@ function CoursesTab() {
         <div className="bg-gray-900 rounded-2xl overflow-hidden">
           {loading ? (
             <div className="p-8 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
-              <div className="text-gray-400">코스 목록을 불러오는 중...</div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              <div className="text-muted-foreground">코스 목록을 불러오는 중...</div>
             </div>
           ) : courses.length === 0 ? (
             <div className="p-8 text-center text-gray-500">

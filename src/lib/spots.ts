@@ -37,7 +37,7 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 }
 
 // 모든 스팟 조회 (카테고리별 필터링)
-export async function getSpots(category?: string) {
+export async function getSpots(category?: string | null) {
   try {
     let query = supabase
       .from('spots')
@@ -45,8 +45,12 @@ export async function getSpots(category?: string) {
       .eq('is_active', true)
       .order('name')
 
+    // 카테고리가 명시적으로 지정된 경우에만 필터 적용
     if (category && category !== 'all') {
+      console.log('카테고리 필터 적용:', category)
       query = query.eq('category', category)
+    } else {
+      console.log('전체 스팟 조회 (카테고리 필터 없음)')
     }
 
     const { data, error } = await query
@@ -54,6 +58,14 @@ export async function getSpots(category?: string) {
     if (error) {
       console.error('스팟 조회 오류:', error)
       return []
+    }
+
+    console.log('조회된 스팟 개수:', data?.length || 0)
+    console.log('전체 조회 결과:', data)
+    if (data && data.length > 0) {
+      console.log('스팟 카테고리들:', data.map((spot: any) => ({ name: spot.name, category: spot.category })))
+    } else {
+      console.log('조회된 스팟이 없습니다. 데이터베이스를 확인해주세요.')
     }
 
     return data || []
@@ -68,7 +80,7 @@ export async function getNearbySpots(
   userLat: number, 
   userLng: number, 
   radiusKm: number = 10,
-  category?: string
+  category?: string | null
 ) {
   try {
     const spots = await getSpots(category)

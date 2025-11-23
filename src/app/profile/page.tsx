@@ -246,12 +246,12 @@ export default function ProfilePage() {
   // 레벨별 색상 반환
   const getLevelColor = (level: string) => {
     switch (level) {
-      case '입문': return 'text-gray-400'
+      case '입문': return 'text-muted-foreground'
       case '중급': return 'text-blue-400'
       case '고급': return 'text-purple-400'
       case '마스터': return 'text-yellow-400'
       case '국가대표': return 'text-red-400'
-      default: return 'text-gray-400'
+      default: return 'text-muted-foreground'
     }
   }
 
@@ -268,9 +268,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 상단 헤더 - 모바일 알림창 피하기 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.back()}
@@ -287,7 +287,7 @@ export default function ProfilePage() {
         {/* 로딩 상태 */}
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#00FF88]" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         )}
 
@@ -295,22 +295,22 @@ export default function ProfilePage() {
         {error && (
           <div className="text-center py-12">
             <div className="mb-6">
-              <User className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <User className="w-16 h-16 text-foreground/70 mx-auto mb-4" />
               <p className="text-red-400 mb-2">{error}</p>
-              <p className="text-gray-500 text-sm">계정에 로그인하여 프로필을 확인하세요</p>
+              <p className="text-foreground/60 text-sm">계정에 로그인하여 프로필을 확인하세요</p>
             </div>
             
             {isAuthenticated === false ? (
               <button 
                 onClick={() => router.push('/login')}
-                className="bg-[#00FF88] text-black px-6 py-3 rounded-xl font-semibold hover:bg-[#00E077] transition-colors"
+                className="bg-primary text-primary-foreground px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
               >
                 로그인 하기
               </button>
             ) : (
               <button 
                 onClick={loadProfileData}
-                className="bg-[#00FF88] text-black px-4 py-2 rounded-xl font-semibold hover:bg-[#00E077] transition-colors"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold hover:bg-primary/90 transition-colors"
               >
                 다시 시도
               </button>
@@ -336,7 +336,7 @@ export default function ProfilePage() {
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <div className="w-full h-full bg-[#00FF88] rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center neon-glow hover:scale-110 transition-transform">
                       <span className="text-3xl font-bold text-black">
                         {profile?.name?.charAt(0) || 'U'}
                       </span>
@@ -346,9 +346,9 @@ export default function ProfilePage() {
                   {/* 호버 오버레이 */}
                   <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     {uploadingImage ? (
-                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      <Loader2 className="w-6 h-6 text-foreground animate-spin" />
                     ) : (
-                      <Camera className="w-6 h-6 text-white" />
+                      <User className="w-5 h-5 text-primary-foreground" />
                     )}
                   </div>
                 </div>
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                         handleCancelEditName()
                       }
                     }}
-                    className="w-full text-xl font-bold text-white bg-gray-800 border border-gray-600 rounded-lg px-3 py-1 text-center focus:outline-none focus:border-[#00FF88] transition-colors"
+                    className="w-full text-xl font-bold text-foreground bg-muted border border-border rounded-lg px-3 py-1 text-center focus:outline-none focus:border-primary transition-colors"
                     placeholder="닉네임을 입력하세요"
                     maxLength={20}
                     autoFocus
@@ -394,7 +394,7 @@ export default function ProfilePage() {
                     <button
                       onClick={handleUpdateName}
                       disabled={updatingName || !editedName.trim()}
-                      className="p-1 bg-[#00FF88] text-black rounded-lg hover:bg-[#00E077] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {updatingName ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -404,7 +404,7 @@ export default function ProfilePage() {
                     </button>
                     <button
                       onClick={handleCancelEditName}
-                      className="p-1 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors"
+                      className="p-1 bg-muted/70 text-foreground rounded-lg hover:bg-muted/60 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -412,14 +412,14 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="relative mb-1">
-                  <h2 className="text-xl font-bold text-white text-center">
+                  <h2 className="text-xl font-bold text-foreground text-center">
                     {profile?.name || '사용자'}
                   </h2>
                   <button
                     onClick={handleEditName}
-                    className="absolute top-1/2 -translate-y-1/2 left-1/2 translate-x-16 opacity-40 hover:opacity-100 transition-opacity p-1 hover:bg-gray-800/50 rounded-lg"
+                    className="absolute top-1/2 -translate-y-1/2 left-1/2 translate-x-16 opacity-40 hover:opacity-100 transition-opacity p-1 hover:bg-muted/50 rounded-lg"
                   >
-                    <Edit3 className="w-4 h-4 text-gray-400 hover:text-white transition-colors" />
+                    <Edit3 className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
                   </button>
                 </div>
               )}
@@ -427,14 +427,14 @@ export default function ProfilePage() {
                 <p className={`text-lg font-semibold ${getLevelColor(runningStats?.currentLevel || '입문')}`}>
                   {runningStats?.currentLevel || '입문'}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-foreground/60 mt-1">
                   {getLevelDescription(runningStats?.currentLevel || '입문')}
                 </p>
               </div>
             </div>
 
             {/* 런닝 통계 */}
-            <div className="bg-gray-900/80 glass rounded-2xl p-6 border border-gray-800">
+            <div className="bg-card/80 glass rounded-2xl p-6 border border-border">
               <h3 className="text-lg font-semibold mb-4 text-center">런닝 통계</h3>
               
               {runningStats ? (
@@ -442,49 +442,49 @@ export default function ProfilePage() {
                   {/* 총 거리 */}
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-2">
-                      <MapPin className="w-5 h-5 text-[#00FF88] mr-2" />
-                      <span className="text-sm text-gray-400">총 거리</span>
+                      <MapPin className="w-5 h-5 text-primary mr-2" />
+                      <span className="text-sm text-muted-foreground">총 거리</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">{runningStats.totalDistance}km</p>
+                    <p className="text-2xl font-bold text-foreground">{runningStats.totalDistance}km</p>
                   </div>
 
                   {/* 총 런닝 횟수 */}
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-2">
-                      <Trophy className="w-5 h-5 text-[#00FF88] mr-2" />
-                      <span className="text-sm text-gray-400">총 런닝</span>
+                      <Trophy className="w-5 h-5 text-primary mr-2" />
+                      <span className="text-sm text-muted-foreground">총 런닝</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">{runningStats.totalRuns}회</p>
+                    <p className="text-2xl font-bold text-foreground">{runningStats.totalRuns}회</p>
                   </div>
 
                   {/* 총 시간 */}
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-2">
-                      <Clock className="w-5 h-5 text-[#00FF88] mr-2" />
-                      <span className="text-sm text-gray-400">총 시간</span>
+                      <Clock className="w-5 h-5 text-primary mr-2" />
+                      <span className="text-sm text-muted-foreground">총 시간</span>
                     </div>
-                    <p className="text-lg font-bold text-white">{formatTime(runningStats.totalTime)}</p>
+                    <h1 className="text-lg font-bold text-primary">{formatTime(runningStats.totalTime)}</h1>
                   </div>
 
                   {/* 평균 페이스 */}
                   <div className="text-center">
                     <div className="flex items-center justify-center mb-2">
-                      <Target className="w-5 h-5 text-[#00FF88] mr-2" />
-                      <span className="text-sm text-gray-400">평균 페이스</span>
+                      <Target className="w-5 h-5 text-primary mr-2" />
+                      <span className="text-sm text-muted-foreground">평균 페이스</span>
                     </div>
-                    <p className="text-lg font-bold text-white">{runningStats.averagePace > 0 ? `${runningStats.averagePace.toFixed(1)}분/km` : '-'}</p>
+                    <p className="text-lg font-bold text-foreground">{runningStats.averagePace > 0 ? `${runningStats.averagePace.toFixed(1)}분/km` : '-'}</p>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-400">런닝 기록이 없습니다.</p>
-                  <p className="text-sm text-gray-500 mt-2">첫 런닝을 시작해보세요!</p>
+                  <p className="text-muted-foreground">런닝 기록이 없습니다.</p>
+                  <p className="text-sm text-foreground/60 mt-2">첫 런닝을 시작해보세요!</p>
                 </div>
               )}
             </div>
 
             {/* 레벨 진행도 */}
-            <div className="bg-gray-900/80 glass rounded-2xl p-6 border border-gray-800">
+            <div className="bg-card/80 glass rounded-2xl p-6 border border-border">
               <h3 className="text-lg font-semibold mb-4">레벨 진행도</h3>
               
               {runningStats ? (
@@ -493,21 +493,22 @@ export default function ProfilePage() {
                     <span className={`text-sm font-semibold ${getLevelColor(runningStats.currentLevel)}`}>
                       {runningStats.currentLevel}
                     </span>
-                    <span className="text-sm text-[#00FF88]">
+                    <span className="text-sm text-primary">
                       {runningStats.totalDistance}km / {runningStats.nextLevelTarget === Infinity ? '∞' : runningStats.nextLevelTarget}km
                     </span>
                   </div>
                   
-                  <div className="w-full bg-gray-700 rounded-full h-3 mb-2">
+                  <div className="w-full bg-muted/60 rounded-full h-3 mb-2">
                     <div 
-                      className="bg-gradient-to-r from-[#00FF88] to-[#00E077] h-3 rounded-full transition-all duration-500"
+                      className="bg-primary h-3 rounded-full transition-all duration-500"
                       style={{ 
                         width: `${runningStats.levelProgress}%` 
                       }}
                     ></div>
                   </div>
                   
-                  <p className="text-xs text-gray-400 text-center">
+                  <p className="text-xs text-muted-foreground">Profile</p>
+                  <p className="text-xs text-muted-foreground text-center">
                     {runningStats.levelProgress < 100 
                       ? `다음 레벨까지 ${Math.max(runningStats.nextLevelTarget - runningStats.totalDistance, 0)}km 남았습니다`
                       : runningStats.currentLevel === '마스터'
@@ -518,41 +519,41 @@ export default function ProfilePage() {
                 </>
               ) : (
                 <div className="text-center py-4">
-                  <p className="text-gray-400">레벨 정보가 없습니다.</p>
+                  <p className="text-muted-foreground">레벨 정보가 없습니다.</p>
                 </div>
               )}
             </div>
 
 
             {/* 설정 메뉴 */}
-            <div className="bg-gray-900/80 glass rounded-2xl border border-gray-800 overflow-hidden">
+            <div className="bg-card/80 glass rounded-2xl border border-border overflow-hidden">
               <button 
                 onClick={() => router.push('/profile/friends')}
-                className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors border-b border-gray-800"
+                className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors border-b border-border"
               >
-                <span className="text-white">친구</span>
+                <span className="text-foreground">친구</span>
               </button>
               <button 
                 onClick={() => router.push('/profile/notifications')}
-                className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors border-b border-gray-800"
+                className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors border-b border-border"
               >
-                <span className="text-white">알림 설정</span>
+                <span className="text-foreground">알림 설정</span>
               </button>
               <button 
                 onClick={() => router.push('/profile/privacy')}
-                className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors border-b border-gray-800"
+                className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors border-b border-border"
               >
-                <span className="text-white">개인정보 설정</span>
+                <span className="text-foreground">개인정보 설정</span>
               </button>
               <button 
                 onClick={() => router.push('/profile/about')}
-                className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors border-b border-gray-800"
+                className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors border-b border-border"
               >
-                <span className="text-white">앱 정보</span>
+                <span className="text-foreground">앱 정보</span>
               </button>
               <button 
                 onClick={handleSignOut}
-                className="w-full px-6 py-4 text-left hover:bg-gray-800/50 transition-colors text-red-400"
+                className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors text-red-400"
               >
                 <span>로그아웃</span>
               </button>
@@ -567,37 +568,37 @@ export default function ProfilePage() {
       {/* 이미지 선택 모달 */}
       {showImageModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-gray-900 rounded-t-2xl w-full max-w-md border-t border-gray-800 animate-slide-up">
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h3 className="text-lg font-semibold text-white">프로필 이미지 변경</h3>
+          <div className="bg-card rounded-t-2xl w-full max-w-md border-t border-border animate-slide-up">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">프로필 이미지 변경</h3>
               <button
                 onClick={() => setShowImageModal(false)}
-                className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+                className="p-2 hover:bg-muted rounded-xl transition-colors"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             
             <div className="p-4 space-y-3">
               <button
                 onClick={handleCameraSelect}
-                className="w-full flex items-center gap-3 p-4 bg-gray-800/50 hover:bg-gray-800 rounded-xl transition-colors"
+                className="w-full flex items-center gap-3 p-4 bg-muted/50 hover:bg-muted rounded-xl transition-colors"
               >
-                <Camera className="w-6 h-6 text-[#00FF88]" />
+                <Camera className="w-6 h-6 text-primary" />
                 <div className="text-left">
-                  <p className="text-white font-medium">카메라로 촬영</p>
-                  <p className="text-sm text-gray-400">새로운 사진을 촬영합니다</p>
+                  <p className="text-foreground font-medium">카메라로 촬영</p>
+                  <p className="text-sm text-muted-foreground">새로운 사진을 촬영합니다</p>
                 </div>
               </button>
               
               <button
                 onClick={handleGallerySelect}
-                className="w-full flex items-center gap-3 p-4 bg-gray-800/50 hover:bg-gray-800 rounded-xl transition-colors"
+                className="w-full flex items-center gap-3 p-4 bg-muted/50 hover:bg-muted rounded-xl transition-colors"
               >
-                <ImageIcon className="w-6 h-6 text-[#00FF88]" />
+                <ImageIcon className="w-6 h-6 text-primary" />
                 <div className="text-left">
-                  <p className="text-white font-medium">갤러리에서 선택</p>
-                  <p className="text-sm text-gray-400">기존 사진을 선택합니다</p>
+                  <p className="text-foreground font-medium">갤러리에서 선택</p>
+                  <p className="text-sm text-muted-foreground">기존 사진을 선택합니다</p>
                 </div>
               </button>
             </div>
@@ -605,7 +606,7 @@ export default function ProfilePage() {
             <div className="p-4">
               <button
                 onClick={() => setShowImageModal(false)}
-                className="w-full py-3 text-gray-400 hover:text-white transition-colors"
+                className="w-full py-3 text-muted-foreground hover:text-foreground transition-colors"
               >
                 취소
               </button>
