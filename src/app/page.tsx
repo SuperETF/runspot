@@ -30,6 +30,7 @@ import { getNearbyCoursesFromLocation, getCourses } from '@/lib/courses'
 import { getCurrentUser, signOut } from '@/lib/auth'
 import { getUserProfile } from '@/lib/profile'
 import { getFriendsLocations } from '@/lib/friends'
+import { shareCurrentLocation, ensureLocationSettings } from '@/lib/locationSharing'
 import { supabase } from '@/lib/supabase'
 
 export default function Home() {
@@ -238,40 +239,7 @@ export default function Home() {
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        }
-        
-        console.log('📍 위치 정보:', {
-          위도: position.coords.latitude,
-          경도: position.coords.longitude,
-          정확도: position.coords.accuracy + 'm',
-          고도: position.coords.altitude,
-          방향: position.coords.heading
-        })
-        
-        setUserLocation(location)
-        setMapCenter(location)
-        setLocationAccuracy(position.coords.accuracy)
-        await loadNearbyCourses(location.lat, location.lng)
-        setLocationLoading(false)
-        setLocationPermissionGranted(true)
-        setShowLocationPermission(false)
-      },
-      (error) => {
-        setLocationLoading(false)
-        setLocationError('위치 정보를 가져올 수 없습니다.')
-        setShowLocationPermission(true)
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      }
-    )
+    // 위치 정보 가져오기 로직은 다른 함수에서 처리
   }
 
   const loadAllCourses = async () => {
@@ -417,12 +385,26 @@ export default function Home() {
         return
       }
 
+      console.log('친구 위치 로드 시작 - 사용자 ID:', currentUser.id)
+
       // 게스트 모드 체크 (로그인된 사용자라면 게스트 모드 해제)
       const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('runspot_guest_mode') === 'true'
       if (isGuestMode && currentUser) {
         // 로그인된 사용자인데 게스트 모드가 설정되어 있다면 해제
         localStorage.removeItem('runspot_guest_mode')
         console.log('로그인된 사용자 - 게스트 모드 해제')
+      }
+
+      // 먼저 친구 관계가 있는지 확인
+      const { data: friendships, error: friendshipError } = await supabase
+        .from('friendships')
+        .select('*')
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
+
+      console.log('친구 관계 확인:', friendships?.length || 0, '개')
+      if (friendshipError) {
+        console.error('친구 관계 확인 오류:', friendshipError)
       }
 
       setFriendsLoading(true)
