@@ -22,9 +22,9 @@ export default function RunningControls({
   if (isCompleted) {
     return (
       <div className="mb-6">
-        <div className="bg-[#00FF88]/10 rounded-2xl p-6 border border-[#00FF88] text-center">
-          <h3 className="text-xl font-bold text-[#00FF88] mb-2">🎉 런닝 완료!</h3>
-          <p className="text-gray-300 text-sm">수고하셨습니다!</p>
+        <div className="bg-primary/10 rounded-2xl p-6 border border-primary text-center">
+          <h3 className="text-xl font-bold text-primary mb-2">🎉 런닝 완료!</h3>
+          <p className="text-muted-foreground text-sm">수고하셨습니다!</p>
         </div>
       </div>
     )
@@ -42,7 +42,7 @@ export default function RunningControls({
           onClick={isPaused ? onResume : onPause}
           className={`font-bold px-6 py-4 rounded-xl transition-colors flex items-center gap-2 ${
             isPaused
-              ? 'bg-[#00FF88] hover:bg-[#00E077] text-black'
+              ? 'bg-primary hover:bg-primary/90 text-primary-foreground neon-glow'
               : 'bg-yellow-500 hover:bg-yellow-400 text-black'
           }`}
         >
@@ -61,7 +61,7 @@ export default function RunningControls({
 
         <button
           onClick={onStop}
-          className="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-4 rounded-xl transition-colors flex items-center gap-2"
+          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold px-6 py-4 rounded-xl transition-colors flex items-center gap-2"
         >
           <Square className="w-5 h-5 fill-current" />
           종료

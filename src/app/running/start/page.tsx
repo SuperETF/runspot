@@ -405,10 +405,10 @@ function RunningStartContent() {
 
   if (!course) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FF88] mx-auto mb-4"></div>
-          <p className="text-gray-400">코스 정보를 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">코스 정보를 불러오는 중...</p>
         </div>
       </div>
     )
@@ -416,7 +416,7 @@ function RunningStartContent() {
 
   return (
     <KakaoMapWrapper>
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-background text-foreground">
       {/* 전체 화면 모드가 아닐 때만 헤더 표시 */}
       {!isFullscreenMode && (
         <RunningHeader

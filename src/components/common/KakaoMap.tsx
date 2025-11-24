@@ -7,6 +7,7 @@ import { MapPin, Navigation } from 'lucide-react'
 import CourseMarkerIcon from './CourseMarkerIcon'
 import FriendLocationMarker from '@/components/friends/FriendLocationMarker'
 import { getRunSpotLogoBase64, createRunSpotMarkerSvg } from '@/utils/imageUtils'
+import { useKakaoMap } from './KakaoMapWrapper'
 
 interface KakaoMapProps {
   center: { lat: number; lng: number }
@@ -27,6 +28,7 @@ interface KakaoMapProps {
   onCourseClick?: (course: any) => void
   friendsLocations?: FriendLocationData[]
   showFriendsOnMap?: boolean
+  lazy?: boolean
 }
 
 const KakaoMap = ({
@@ -46,23 +48,40 @@ const KakaoMap = ({
   courses = [],
   onCourseClick,
   friendsLocations = [],
-  showFriendsOnMap = true
+  showFriendsOnMap = true,
+  lazy = false
 }: KakaoMapProps) => {
-  const [isKakaoLoaded, setIsKakaoLoaded] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const { isLoaded, loadKakaoMap } = useKakaoMap()
+  const [logoBase64, setLogoBase64] = useState<string>('')
+  const [runSpotMarkerSvg, setRunSpotMarkerSvg] = useState<string>('')
+  const [hasInteracted, setHasInteracted] = useState(false)
   const [currentLocation, setCurrentLocation] = useState<GPSCoordinate | null>(null)
   const [mapInstance, setMapInstance] = useState<any>(null)
-  const [logoBase64, setLogoBase64] = useState<string>('')
 
   // RunSpot 로고 로드
   useEffect(() => {
-    const loadLogo = async () => {
-      const logo = await getRunSpotLogoBase64()
-      setLogoBase64(logo)
-      console.log('🖼️ RunSpot 로고 로드 완료:', logo ? '성공' : '실패')
+    if (hasInteracted && !isLoaded) {
+      loadKakaoMap()
     }
-    loadLogo()
-  }, [])
+  }, [hasInteracted, isLoaded, loadKakaoMap])
+
+  useEffect(() => {
+    if (isLoaded) {
+      const loadLogo = async () => {
+        try {
+          const logo = await getRunSpotLogoBase64()
+          setLogoBase64(logo)
+          
+          const markerSvg = createRunSpotMarkerSvg(logo)
+          setRunSpotMarkerSvg(markerSvg)
+        } catch (error) {
+          console.error('로고 로드 실패:', error)
+        }
+      }
+      
+      loadLogo()
+    }
+  }, [isLoaded])
 
   // center와 zoom prop이 변경될 때 지도 업데이트
   useEffect(() => {
@@ -78,59 +97,6 @@ const KakaoMap = ({
       }
     }
   }, [center, zoom, mapInstance])
-
-  useEffect(() => {
-    console.log('🗺️ KakaoMap 컴포넌트 마운트됨')
-    
-    // Kakao Maps SDK 로딩 상태 확인
-    const checkKakaoMaps = () => {
-      console.log('🔍 Kakao Maps SDK 상태 확인 중...')
-      console.log('window 객체 존재:', typeof window !== 'undefined')
-      console.log('kakao 객체 존재:', !!(window as any).kakao)
-      console.log('kakao.maps 객체 존재:', !!(window as any).kakao?.maps)
-      
-      if (typeof window !== 'undefined' && (window as any).kakao && (window as any).kakao.maps) {
-        console.log('✅ Kakao 객체 발견됨')
-        
-        // LatLng, Map 생성자가 모두 사용 가능한지 확인
-        const kakaoMaps = (window as any).kakao.maps
-        if (kakaoMaps.LatLng && kakaoMaps.Map) {
-          console.log('✅ Kakao Maps SDK 완전히 로드됨')
-          setIsKakaoLoaded(true)
-          setLoadError(null)
-        } else {
-          console.log('⏳ SDK 로드됨, 라이브러리 초기화 대기 중...')
-          
-          // 100ms마다 체크 (최대 3초)
-          let attempts = 0
-          const maxAttempts = 30
-          
-          const checkInterval = setInterval(() => {
-            attempts++
-            if (kakaoMaps.LatLng && kakaoMaps.Map) {
-              console.log('✅ Kakao Maps 라이브러리 완전 로드됨')
-              clearInterval(checkInterval)
-              setIsKakaoLoaded(true)
-              setLoadError(null)
-            } else if (attempts >= maxAttempts) {
-              console.error('❌ Kakao Maps 라이브러리 로딩 타임아웃')
-              clearInterval(checkInterval)
-              setLoadError('Kakao Maps 라이브러리 로딩 타임아웃')
-            }
-          }, 100)
-        }
-      } else {
-        console.log('⏳ Kakao Maps SDK 대기 중... (100ms 후 재시도)')
-        // 아직 로드되지 않은 경우 계속 대기
-        setTimeout(checkKakaoMaps, 100)
-      }
-    }
-
-    // 환경변수 확인
-    console.log('🔑 Kakao API 키 존재 여부:', !!process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY)
-    
-    checkKakaoMaps()
-  }, [])
 
   const handleMapClick = (_target: any, mouseEvent: any) => {
     if (onClick) {
@@ -163,28 +129,33 @@ const KakaoMap = ({
     setMapInstance(map)
   }
 
-  // 에러 상태 표시
-  if (loadError) {
+  const handleMapInteraction = () => {
+    if (!hasInteracted) {
+      setHasInteracted(true)
+    }
+  }
+
+  if (lazy && !hasInteracted) {
     return (
-      <div className={`relative ${className} flex items-center justify-center bg-gray-800 text-white`} style={{ width, height }}>
-        <div className="text-center p-4">
-          <div className="text-red-400 mb-2">⚠️ 지도 로딩 오류</div>
-          <div className="text-sm text-gray-300">{loadError}</div>
-          <div className="text-xs text-gray-400 mt-2">
-            Kakao Maps API 키를 확인해주세요
-          </div>
+      <div 
+        className={`relative ${className} bg-muted rounded-2xl flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors`} 
+        style={{ width, height }}
+        onClick={handleMapInteraction}
+      >
+        <div className="text-center">
+          <MapPin className="w-8 h-8 text-primary mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">지도 보기</p>
         </div>
       </div>
     )
   }
 
-  // 로딩 상태 표시
-  if (!isKakaoLoaded) {
+  if (!isLoaded) {
     return (
-      <div className={`relative ${className} flex items-center justify-center bg-gray-800 text-white`} style={{ width, height }}>
-        <div className="text-center p-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF88] mx-auto mb-2"></div>
-          <div className="text-sm text-gray-300">지도 로딩 중...</div>
+      <div className={`relative ${className} bg-muted rounded-2xl flex items-center justify-center`} style={{ width, height }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">지도 로딩 중...</p>
         </div>
       </div>
     )

@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Search, MapPin, Play, Bookmark, User, Navigation, Clock, Home as HomeIcon, Store, Mail, X, Users } from 'lucide-react'
-import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
+import { MapPin, Play, Bookmark, User, Navigation, Home as HomeIcon, Store, Mail, X, Users } from 'lucide-react'
+import { GPSCoordinate, FriendLocationData } from '@/types/database'
+import { getNearbyCoursesFromLocation, getCourses } from '@/lib/courses'
+import { getCurrentUser, signOut } from '@/lib/auth'
+import { getUserProfile } from '@/lib/profile'
+import { supabase } from '@/lib/supabase'
 
-// KakaoMap을 dynamic import로 처리
+// 무거운 컴포넌트들을 지연 로딩
+import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
 const KakaoMap = dynamic(() => import('@/components/common/KakaoMap'), {
   ssr: false,
   loading: () => (
@@ -18,20 +23,12 @@ const KakaoMap = dynamic(() => import('@/components/common/KakaoMap'), {
     </div>
   )
 })
-import CoursePolyline from '@/components/common/CoursePolyline'
-import CourseMarker from '@/components/common/CourseMarker'
-import CourseMarkerIcon from '@/components/common/CourseMarkerIcon'
-import SupabaseStatus from '@/components/common/SupabaseStatus'
-import AuthenticationBanner from '@/components/common/AuthenticationBanner'
-import LocationPermission from '@/components/common/LocationPermission'
-import BookmarkButton from '@/components/BookmarkButton'
-import { GPSCoordinate, Course, FriendLocationData } from '@/types/database'
-import { getNearbyCoursesFromLocation, getCourses } from '@/lib/courses'
-import { getCurrentUser, signOut } from '@/lib/auth'
-import { getUserProfile } from '@/lib/profile'
-import { getFriendsLocations } from '@/lib/friends'
-import { shareCurrentLocation, ensureLocationSettings } from '@/lib/locationSharing'
-import { supabase } from '@/lib/supabase'
+const CourseMarkerIcon = lazy(() => import('@/components/common/CourseMarkerIcon'))
+const SupabaseStatus = lazy(() => import('@/components/common/SupabaseStatus'))
+const AuthenticationBanner = lazy(() => import('@/components/common/AuthenticationBanner'))
+const LocationPermission = lazy(() => import('@/components/common/LocationPermission'))
+const BookmarkButton = lazy(() => import('@/components/BookmarkButton'))
+
 
 export default function Home() {
   const router = useRouter()
@@ -50,32 +47,13 @@ export default function Home() {
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
   const [showLocationPermission, setShowLocationPermission] = useState(false)
   
-  // 친구 위치 관련 상태
+  // 친구 위치 관련 상태 (지연 로딩)
   const [friendsLocations, setFriendsLocations] = useState<FriendLocationData[]>([])
-  const [showFriendsOnMap, setShowFriendsOnMap] = useState(true)
+  const [showFriendsOnMap, setShowFriendsOnMap] = useState(false)
   const [friendsLoading, setFriendsLoading] = useState(false)
+  const [friendsEnabled, setFriendsEnabled] = useState(false)
 
-  // 샘플 코스 데이터 (한강공원 여의도) - 백업용
-  const sampleRoute: GPSCoordinate[] = [
-    { lat: 37.5285, lng: 126.9367 },
-    { lat: 37.5290, lng: 126.9380 },
-    { lat: 37.5295, lng: 126.9390 },
-    { lat: 37.5300, lng: 126.9400 },
-    { lat: 37.5305, lng: 126.9410 },
-    { lat: 37.5300, lng: 126.9420 },
-    { lat: 37.5295, lng: 126.9430 },
-    { lat: 37.5290, lng: 126.9440 },
-    { lat: 37.5285, lng: 126.9450 },
-    { lat: 37.5280, lng: 126.9440 },
-    { lat: 37.5275, lng: 126.9430 },
-    { lat: 37.5270, lng: 126.9420 },
-    { lat: 37.5275, lng: 126.9410 },
-    { lat: 37.5280, lng: 126.9400 },
-    { lat: 37.5285, lng: 126.9390 },
-    { lat: 37.5285, lng: 126.9367 }
-  ]
-
-  const center = { lat: 37.5285, lng: 126.9400 }
+  const center = useMemo(() => ({ lat: 37.5285, lng: 126.9400 }), [])
   const [mapCenter, setMapCenter] = useState<GPSCoordinate>(center)
 
   // 로그인 상태 확인
@@ -86,7 +64,28 @@ export default function Home() {
     setTimeout(() => {
       checkAuthStatus()
     }, 100)
+    // 위치 권한 자동 확인
+    checkLocationPermission()
   }, [])
+
+  // 위치 권한 자동 확인
+  const checkLocationPermission = async () => {
+    if (!navigator.geolocation) return
+    
+    try {
+      // 위치 권한 상태 확인
+      if ('permissions' in navigator) {
+        const result = await navigator.permissions.query({ name: 'geolocation' })
+        if (result.state === 'granted') {
+          setLocationPermissionGranted(true)
+          // 자동으로 현재 위치 가져오기
+          getCurrentLocationDirect()
+        }
+      }
+    } catch (error) {
+      console.log('위치 권한 확인 실패:', error)
+    }
+  }
 
   // 회원가입 완료 메시지 확인
   const checkSignupMessage = () => {
@@ -125,10 +124,8 @@ export default function Home() {
           }
           // 사용자 프로필 다시 로드
           await loadUserProfile()
-          // 친구 위치 다시 로드
-          if (userLocation) {
-            await loadFriendsLocations()
-          }
+          // 친구 기능 활성화
+          setFriendsEnabled(true)
         } else if (event === 'SIGNED_OUT') {
           // 로그아웃 시 상태 초기화
           setUserProfile(null)
@@ -150,19 +147,15 @@ export default function Home() {
     }
   }, [isConnected])
 
-  // 사용자 위치가 변경될 때 친구 위치 로드
+  // 사용자 위치가 변경될 때 친구 위치 로드 (사용자가 활성화한 경우만)
   useEffect(() => {
-    if (userLocation && isConnected) {
+    if (userLocation && isConnected && friendsEnabled) {
       loadFriendsLocations()
     }
-  }, [userLocation, isConnected])
+  }, [userLocation, isConnected, friendsEnabled])
 
-  // 모달 상태 디버깅
-  useEffect(() => {
-    console.log('모달 상태 변경:', { showSignupMessage, signupEmail })
-  }, [showSignupMessage, signupEmail])
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const user = await getCurrentUser()
       const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('runspot_guest_mode') === 'true'
@@ -190,6 +183,10 @@ export default function Home() {
           router.push('/login')
           return
         }
+        
+        // 로그인된 사용자의 프로필 로드
+        await loadUserProfile()
+        setFriendsEnabled(true)
       }
     } catch (error) {
       console.error('인증 상태 확인 실패:', error)
@@ -199,7 +196,7 @@ export default function Home() {
         router.push('/login')
       }
     }
-  }
+  }, [])
 
   const loadInitialData = async () => {
     // 초기 데이터 로딩 (위치 + 코스)
@@ -239,10 +236,60 @@ export default function Home() {
       return
     }
 
-    // 위치 정보 가져오기 로직은 다른 함수에서 처리
+    setLocationLoading(true)
+    setLocationError('')
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const location = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+        
+        console.log('📍 자동 위치 감지:', {
+          위도: position.coords.latitude,
+          경도: position.coords.longitude,
+          정확도: position.coords.accuracy + 'm'
+        })
+        
+        setUserLocation(location)
+        setMapCenter(location)
+        setLocationAccuracy(position.coords.accuracy)
+        setLocationPermissionGranted(true)
+        setLocationLoading(false)
+        
+        // 주변 코스 로드
+        await loadNearbyCourses(location.lat, location.lng)
+      },
+      (error) => {
+        console.error('위치 정보 가져오기 실패:', error)
+        setLocationLoading(false)
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError('위치 정보 접근이 거부되었습니다.')
+            setLocationPermissionGranted(false)
+            break
+          case error.POSITION_UNAVAILABLE:
+            setLocationError('위치 정보를 사용할 수 없습니다.')
+            break
+          case error.TIMEOUT:
+            setLocationError('위치 정보 요청이 시간 초과되었습니다.')
+            break
+          default:
+            setLocationError('위치 정보를 가져오는 중 오류가 발생했습니다.')
+            break
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5분
+      }
+    )
   }
 
-  const loadAllCourses = async () => {
+  const loadAllCourses = useCallback(async () => {
     try {
       console.log('🗺️ 전체 코스 로딩 시작')
       const courses = await getCourses(50) // 최대 50개 코스
@@ -251,9 +298,9 @@ export default function Home() {
     } catch (error) {
       console.error('전체 코스 로드 실패:', error)
     }
-  }
+  }, [])
 
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     try {
       const user = await getCurrentUser()
       if (user) {
@@ -263,9 +310,9 @@ export default function Home() {
     } catch (error) {
       console.error('프로필 로드 실패:', error)
     }
-  }
+  }, [])
 
-  const moveToMyLocation = () => {
+  const moveToMyLocation = useCallback(() => {
     if (!locationPermissionGranted) {
       // 위치 권한이 없는 경우 LocationPermission 컴포넌트 표시
       setShowLocationPermission(true)
@@ -327,9 +374,9 @@ export default function Home() {
         maximumAge: 0
       }
     )
-  }
+  }, [locationPermissionGranted, userLocation])
 
-  const loadNearbyCourses = async (lat: number, lng: number) => {
+  const loadNearbyCourses = useCallback(async (lat: number, lng: number) => {
     try {
       setLoading(true)
       const courses = await getNearbyCoursesFromLocation(lat, lng, 3, 8)
@@ -339,11 +386,10 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
 
-  // 코스 타입 이모지
-  const getCourseEmoji = (courseType: string) => {
+  const getCourseEmoji = useCallback((courseType: string) => {
     switch (courseType) {
       case 'hangang': return '🌊'
       case 'mountain': return '🏔️'
@@ -352,10 +398,9 @@ export default function Home() {
       case 'track': return '🏟️'
       default: return '🏃‍♂️'
     }
-  }
+  }, [])
 
-  // 현재 표시할 지도 중심 (mapCenter 상태 사용)
-  const currentCenter = mapCenter
+  const currentCenter = useMemo(() => mapCenter, [mapCenter])
 
   // 로그아웃 처리
   const handleSignOut = async () => {
@@ -374,47 +419,24 @@ export default function Home() {
     }
   }
 
-  // 친구 위치 로드
+  // 친구 위치 로드 (지연 로딩)
   const loadFriendsLocations = async () => {
     try {
-      // 실제 로그인 상태 확인
       const currentUser = await getCurrentUser()
       if (!currentUser) {
-        console.log('로그인되지 않은 사용자입니다. 친구 위치 기능을 사용할 수 없습니다.')
         setFriendsLocations([])
         return
       }
 
-      console.log('친구 위치 로드 시작 - 사용자 ID:', currentUser.id)
-
-      // 게스트 모드 체크 (로그인된 사용자라면 게스트 모드 해제)
-      const isGuestMode = typeof window !== 'undefined' && localStorage.getItem('runspot_guest_mode') === 'true'
-      if (isGuestMode && currentUser) {
-        // 로그인된 사용자인데 게스트 모드가 설정되어 있다면 해제
-        localStorage.removeItem('runspot_guest_mode')
-        console.log('로그인된 사용자 - 게스트 모드 해제')
-      }
-
-      // 먼저 친구 관계가 있는지 확인
-      const { data: friendships, error: friendshipError } = await supabase
-        .from('friendships')
-        .select('*')
-        .eq('status', 'accepted')
-        .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
-
-      console.log('친구 관계 확인:', friendships?.length || 0, '개')
-      if (friendshipError) {
-        console.error('친구 관계 확인 오류:', friendshipError)
-      }
-
+      // 친구 기능 모듈을 동적으로 로드
+      const { getFriendsLocations } = await import('@/lib/friends')
+      
       setFriendsLoading(true)
       const result = await getFriendsLocations(userLocation || undefined)
       
       if (result.success && result.data) {
         setFriendsLocations(result.data)
-        console.log('친구 위치 로드 완료:', result.data.length, '명')
       } else {
-        console.error('친구 위치 로드 실패:', result.error)
         setFriendsLocations([])
       }
     } catch (error) {
@@ -472,12 +494,14 @@ export default function Home() {
   }
 
   return (
-    <KakaoMapWrapper>
-      <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      {/* 인증 가능 알림 배너 */}
-      {userProfile?.id && (
-        <AuthenticationBanner userId={userProfile.id} />
-      )}
+      <KakaoMapWrapper>
+        <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+        {/* 인증 가능 알림 배너 */}
+        {userProfile?.id && (
+          <Suspense fallback={<div className="h-12 bg-muted animate-pulse"></div>}>
+            <AuthenticationBanner userId={userProfile.id} />
+          </Suspense>
+        )}
       
       {/* 상단 네비게이션 */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border safe-top">
@@ -492,7 +516,9 @@ export default function Home() {
           <div className="flex items-center gap-3">
             {/* Supabase 연결 상태 */}
             <div className="hidden sm:block">
-              <SupabaseStatus onConnectionChange={setIsConnected} />
+              <Suspense fallback={<div className="w-3 h-3 bg-muted rounded-full animate-pulse"></div>}>
+                <SupabaseStatus onConnectionChange={setIsConnected} />
+              </Suspense>
             </div>
             {/* 프로필 드롭다운 */}
             <div className="relative profile-dropdown">
@@ -550,7 +576,14 @@ export default function Home() {
                 {/* 친구 위치 토글 - 로그인된 사용자만 */}
                 {userProfile?.id && (
                   <button 
-                    onClick={() => setShowFriendsOnMap(!showFriendsOnMap)}
+                    onClick={async () => {
+                      if (!friendsEnabled) {
+                        setFriendsEnabled(true)
+                        setShowFriendsOnMap(true)
+                      } else {
+                        setShowFriendsOnMap(!showFriendsOnMap)
+                      }
+                    }}
                     className={`p-2 hover:bg-muted rounded-xl transition-colors ${
                       showFriendsOnMap ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
                     }`}
@@ -580,10 +613,12 @@ export default function Home() {
           <div className="relative">
             {showLocationPermission ? (
               <div className="p-4">
-                <LocationPermission
-                  onPermissionGranted={handleLocationPermissionGranted}
-                  onPermissionDenied={handleLocationPermissionDenied}
-                />
+                <Suspense fallback={<div className="p-4 bg-muted animate-pulse rounded-2xl"></div>}>
+                  <LocationPermission
+                    onPermissionGranted={handleLocationPermissionGranted}
+                    onPermissionDenied={handleLocationPermissionDenied}
+                  />
+                </Suspense>
               </div>
             ) : (
               <KakaoMap
@@ -679,11 +714,13 @@ export default function Home() {
               >
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0">
-                    <CourseMarkerIcon 
-                      courseType={course.course_type} 
-                      size={48}
-                      className="hover:scale-110 transition-transform duration-200"
-                    />
+                    <Suspense fallback={<div className="w-12 h-12 bg-muted rounded-full animate-pulse"></div>}>
+                      <CourseMarkerIcon 
+                        courseType={course.course_type} 
+                        size={48}
+                        className="hover:scale-110 transition-transform duration-200"
+                      />
+                    </Suspense>
                   </div>
                   <div className="flex-1">
                     <div className="mb-1">
@@ -695,7 +732,9 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <BookmarkButton courseId={course.id} />
+                    <Suspense fallback={<div className="w-10 h-10 bg-muted rounded-xl animate-pulse"></div>}>
+                      <BookmarkButton courseId={course.id} />
+                    </Suspense>
                     <button 
                       onClick={() => router.push(`/running/start?courseId=${course.id}&courseName=${encodeURIComponent(course.name)}`)}
                       className="p-3 bg-muted/80 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all duration-300 group"
@@ -814,7 +853,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      </div>
-    </KakaoMapWrapper>
+        </div>
+      </KakaoMapWrapper>
   )
 }
