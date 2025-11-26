@@ -645,9 +645,16 @@ export default function SpotsPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-foreground">{spot.name}</h3>
-                        <span className="text-sm text-muted-foreground">
-                          {spot.distance !== null ? `${spot.distance.toFixed(1)}km` : '거리 정보 없음'}
-                        </span>
+                        {spot.distance !== null ? (
+                          <div className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-lg">
+                            <MapPin className="w-3 h-3 text-primary" />
+                            <span className="text-sm font-medium text-primary">
+                              {spot.distance.toFixed(1)}km
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">거리 정보 없음</span>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 mb-2">

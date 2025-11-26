@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스팟 좌표 업데이트</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_MAP_API_KEY&libraries=services"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #00FF88;
+      color: black;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #00DD77;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .success { color: #00AA00; }
+    .error { color: #DD0000; }
+    .warning { color: #FF8800; }
+    .info { color: #0066DD; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗺️ 스팟 좌표 일괄 업데이트</h1>
+    <p>기존 스팟들의 주소를 기반으로 좌표 정보를 자동으로 업데이트합니다.</p>
+    
+    <button id="updateBtn" onclick="updateAllCoordinates()">
+      좌표 업데이트 시작
+    </button>
+    
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // Supabase 클라이언트 초기화
+    const supabaseUrl = 'YOUR_SUPABASE_URL'
+    const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log')
+      const timestamp = new Date().toLocaleTimeString()
+      logDiv.innerHTML += `<div class="${type}">[${timestamp}] ${message}</div>`
+      logDiv.scrollTop = logDiv.scrollHeight
+      console.log(message)
+    }
+
+    async function getCoordinatesFromAddress(address) {
+      return new Promise((resolve) => {
+        const geocoder = new kakao.maps.services.Geocoder()
+        
+        geocoder.addressSearch(address, (result, status) => {
+          if (status === kakao.maps.services.Status.OK && result.length > 0) {
+            resolve({
+              lat: parseFloat(result[0].y),
+              lng: parseFloat(result[0].x)
+            })
+          } else {
+            resolve(null)
+          }
+        })
+      })
+    }
+
+    async function updateAllCoordinates() {
+      const btn = document.getElementById('updateBtn')
+      btn.disabled = true
+      btn.textContent = '업데이트 중...'
+      
+      document.getElementById('log').innerHTML = ''
+      log('🔄 스팟 좌표 업데이트 시작...', 'info')
+
+      try {
+        // 좌표가 없는 스팟들 조회
+        const { data: spots, error } = await supabase
+          .from('spots')
+          .select('id, name, address, latitude, longitude')
+          .or('latitude.is.null,longitude.is.null,latitude.eq.0,longitude.eq.0')
+
+        if (error) {
+          log(`❌ 스팟 조회 오류: ${error.message}`, 'error')
+          return
+        }
+
+        if (!spots || spots.length === 0) {
+          log('✅ 모든 스팟에 좌표 정보가 있습니다.', 'success')
+          return
+        }
+
+        log(`📍 좌표가 없는 스팟 ${spots.length}개 발견`, 'info')
+
+        let successCount = 0
+        let failCount = 0
+
+        for (const spot of spots) {
+          log(`처리 중: ${spot.name} (${spot.address})`, 'info')
+
+          if (!spot.address) {
+            log(`⚠️ ${spot.name}: 주소 정보 없음`, 'warning')
+            failCount++
+            continue
+          }
+
+          // 주소를 좌표로 변환
+          const coordinates = await getCoordinatesFromAddress(spot.address)
+
+          if (coordinates) {
+            // DB 업데이트
+            const { error: updateError } = await supabase
+              .from('spots')
+              .update({
+                latitude: coordinates.lat,
+                longitude: coordinates.lng
+              })
+              .eq('id', spot.id)
+
+            if (updateError) {
+              log(`❌ ${spot.name} 업데이트 실패: ${updateError.message}`, 'error')
+              failCount++
+            } else {
+              log(`✅ ${spot.name} 좌표 업데이트 완료: ${coordinates.lat.toFixed(6)}, ${coordinates.lng.toFixed(6)}`, 'success')
+              successCount++
+            }
+          } else {
+            log(`⚠️ ${spot.name}: 좌표 변환 실패`, 'warning')
+            failCount++
+          }
+
+          // API 호출 제한을 위한 딜레이
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+
+        log('', 'info')
+        log('📊 업데이트 결과:', 'info')
+        log(`✅ 성공: ${successCount}개`, 'success')
+        log(`❌ 실패: ${failCount}개`, 'error')
+        log('🎉 좌표 업데이트 완료!', 'success')
+
+      } catch (error) {
+        log(`❌ 오류 발생: ${error.message}`, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = '좌표 업데이트 시작'
+      }
+    }
+
+    // 페이지 로드 시 카카오맵 SDK 확인
+    window.onload = () => {
+      if (!window.kakao || !window.kakao.maps) {
+        log('❌ 카카오맵 SDK가 로드되지 않았습니다. API 키를 확인하세요.', 'error')
+        document.getElementById('updateBtn').disabled = true
+      } else {
+        log('✅ 카카오맵 SDK 로드 완료', 'success')
+      }
+    }
+  </script>
+</body>
+</html>
