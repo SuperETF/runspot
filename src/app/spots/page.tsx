@@ -81,6 +81,7 @@ export default function SpotsPage() {
   const [detailSpot, setDetailSpot] = useState<Spot | null>(null)
   const [userId, setUserId] = useState<string>('')
   const [couponHistory, setCouponHistory] = useState<any[]>([])
+  const [spotsWithDistance, setSpotsWithDistance] = useState<SpotWithDistance[]>([])
 
   // 카테고리 필터
   const categories = [
@@ -122,14 +123,54 @@ export default function SpotsPage() {
     return () => clearInterval(timer)
   }, [activeCoupons])
 
+  // 거리 계산 함수 (Haversine formula)
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371 // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    return R * c
+  }
+
+  // 스팟에 거리 정보 추가
+  const addDistanceToSpots = (spots: Spot[]): SpotWithDistance[] => {
+    if (!userLocation) {
+      return spots.map(spot => ({ ...spot, distance: null }))
+    }
+    
+    return spots.map(spot => ({
+      ...spot,
+      distance: spot.latitude && spot.longitude 
+        ? calculateDistance(userLocation.lat, userLocation.lng, spot.latitude, spot.longitude)
+        : null
+    })).sort((a, b) => {
+      // 거리순으로 정렬 (거리 정보가 없는 것은 마지막에)
+      if (a.distance === null && b.distance === null) return 0
+      if (a.distance === null) return 1
+      if (b.distance === null) return -1
+      return a.distance - b.distance
+    })
+  }
+
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation({
+          const newLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
-          })
+          }
+          setUserLocation(newLocation)
+          
+          // 위치 업데이트 후 스팟에 거리 정보 추가
+          if (spots.length > 0) {
+            const spotsWithDist = addDistanceToSpots(spots)
+            setSpotsWithDistance(spotsWithDist)
+          }
         },
         (error) => {
           console.error('위치 정보를 가져올 수 없습니다:', error)
@@ -161,6 +202,10 @@ export default function SpotsPage() {
       console.log('로딩된 스팟 데이터:', spotsData)
       console.log('선택된 카테고리:', selectedCategory)
       setSpots(spotsData as any)
+      
+      // 거리 정보 추가
+      const spotsWithDist = addDistanceToSpots(spotsData as Spot[])
+      setSpotsWithDistance(spotsWithDist)
     } catch (error) {
       console.error('스팟 로딩 오류:', error)
       setSpots([])
@@ -213,18 +258,6 @@ export default function SpotsPage() {
     }
   }
 
-  // 거리 계산 함수 (Haversine 공식)
-  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371 // 지구 반지름 (km)
-    const dLat = (lat2 - lat1) * Math.PI / 180
-    const dLng = (lng2 - lng1) * Math.PI / 180
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLng/2) * Math.sin(dLng/2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-    return R * c
-  }
 
   // 완주 인증 확인 (테스트용 - 항상 성공)
   const checkRunCompletion = (spot: any) => {
@@ -321,6 +354,20 @@ export default function SpotsPage() {
     localStorage.setItem('runspot_active_coupons', JSON.stringify(validCoupons))
   }
 
+  // 뛰어가기 버튼 클릭 (카카오맵 길찾기)
+  const handleRunToSpot = (spot: Spot | SpotWithDistance) => {
+    if (!spot.latitude || !spot.longitude) {
+      alert('스팟의 위치 정보가 없습니다.')
+      return
+    }
+    
+    // 카카오맵 길찾기 URL 생성
+    const kakaoMapUrl = `https://map.kakao.com/link/to/${encodeURIComponent(spot.name)},${spot.latitude},${spot.longitude}`
+    
+    // 새 창에서 카카오맵 열기
+    window.open(kakaoMapUrl, '_blank')
+  }
+
   // 혜택 받기 버튼 클릭
   const handleGetBenefit = async (spot: any) => {
     if (!userId) {
@@ -358,22 +405,16 @@ export default function SpotsPage() {
         return
       }
 
-      // 새 쿠폰 생성
+      // 새 쿠폰 생성 (running_log_id 전달)
       const newCoupon = await createSpotCoupon(
         userId,
         spot.id,
-        new Date(validRunningLog.completed_at),
+        validRunningLog.id, // running_log_id 전달
         userLocation?.lat || 37.5665,
         userLocation?.lng || 126.9780
       )
 
-      // running_log의 authentication_count 증가
-      await (supabase as any)
-        .from('running_logs')
-        .update({ 
-          authentication_count: (validRunningLog.authentication_count || 0) + 1 
-        })
-        .eq('id', validRunningLog.id)
+      // authentication_count는 createSpotCoupon 내부에서 자동 증가됨
 
       // 필드명 통일을 위한 정규화
       const couponData = newCoupon as any
@@ -468,34 +509,6 @@ export default function SpotsPage() {
     return status === 'active' ? '인증 완료' : '인증하기'
   }
 
-  // 스팟으로 러닝 네비게이션 시작
-  const handleRunToSpot = (spot: Spot) => {
-    if (!userLocation) {
-      alert('현재 위치를 확인할 수 없습니다.')
-      return
-    }
-
-    // 러닝 페이지로 이동하면서 스팟 정보 전달
-    const runningData = {
-      type: 'spot_navigation',
-      destination: {
-        name: spot.name,
-        latitude: spot.latitude,
-        longitude: spot.longitude,
-        address: spot.address
-      },
-      start: {
-        latitude: userLocation.lat,
-        longitude: userLocation.lng
-      }
-    }
-
-    // 세션 스토리지에 러닝 데이터 저장
-    sessionStorage.setItem('runspot_navigation_data', JSON.stringify(runningData))
-    
-    // 러닝 페이지로 이동
-    router.push('/running')
-  }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -602,9 +615,9 @@ export default function SpotsPage() {
                 </div>
               ))}
             </div>
-          ) : spots.length > 0 ? (
+          ) : spotsWithDistance.length > 0 ? (
             <div className="space-y-3">
-              {spots.map((spot, index) => (
+              {spotsWithDistance.map((spot, index) => (
                 <div 
                   key={spot.id}
                   onClick={() => {
@@ -632,7 +645,9 @@ export default function SpotsPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold text-foreground">{spot.name}</h3>
-                        <span className="text-sm text-muted-foreground">{(spot as any).distance || '0'}km</span>
+                        <span className="text-sm text-muted-foreground">
+                          {spot.distance !== null ? `${spot.distance.toFixed(1)}km` : '거리 정보 없음'}
+                        </span>
                       </div>
                       
                       <div className="flex items-center gap-2 mb-2">
@@ -651,7 +666,7 @@ export default function SpotsPage() {
                     </div>
                   </div>
                   
-                  <p className="text-sm text-muted-foreground mb-3">{spot.description}</p>
+                  <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap break-words">{spot.description}</p>
                   
                   <div className="flex items-center justify-between">
                     <div className="bg-card/10 border border-gray-900/20 rounded-lg px-3 py-1">
@@ -821,7 +836,7 @@ export default function SpotsPage() {
               <div className="space-y-4 mb-6 text-left">
                 <div>
                   <h3 className="text-sm font-medium text-foreground mb-2">소개</h3>
-                  <p className="text-muted-foreground">{detailSpot.description}</p>
+                  <p className="text-muted-foreground whitespace-pre-wrap break-words">{detailSpot.description}</p>
                 </div>
 
                 <div>

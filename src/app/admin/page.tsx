@@ -246,7 +246,7 @@ function CoursesTab() {
         {/* 코스 생성 방식 선택 카드들 */}
         <div
           onClick={() => router.push('/admin/course/create?mode=click')}
-          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
+          className="bg-card border border-border rounded-2xl p-4 sm:p-6 hover:border-primary transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
             <Map className="w-6 h-6 sm:w-8 sm:h-8 text-primary mr-3" />
@@ -264,7 +264,7 @@ function CoursesTab() {
 
         <div
           onClick={() => router.push('/admin/course/create?mode=gps')}
-          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
+          className="bg-card border border-border rounded-2xl p-4 sm:p-6 hover:border-primary transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
             <Route className="w-6 h-6 sm:w-8 sm:h-8 text-primary mr-3" />
@@ -282,7 +282,7 @@ function CoursesTab() {
 
         <div
           onClick={() => router.push('/admin/course/create?mode=hybrid')}
-          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
+          className="bg-card border border-border rounded-2xl p-4 sm:p-6 hover:border-primary transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
@@ -302,7 +302,7 @@ function CoursesTab() {
 
         <div
           onClick={() => setShowGPXUpload(true)}
-          className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 hover:border-[#00FF88] transition-colors cursor-pointer active:scale-95"
+          className="bg-card border border-border rounded-2xl p-4 sm:p-6 hover:border-primary transition-colors cursor-pointer active:scale-95"
         >
           <div className="flex items-center mb-3 sm:mb-4">
             <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-600 rounded-lg flex items-center justify-center mr-3">
@@ -334,7 +334,7 @@ function CoursesTab() {
           </button>
         </div>
         
-        <div className="bg-gray-900 rounded-2xl overflow-hidden">
+        <div className="bg-card rounded-2xl overflow-hidden border border-border">
           {loading ? (
             <div className="p-8 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
@@ -465,7 +465,7 @@ function CoursesTab() {
       {/* GPX 업로드 모달 */}
       {showGPXUpload && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md border border-border shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">GPX 파일 업로드</h3>
               <button
@@ -481,14 +481,14 @@ function CoursesTab() {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   GPX 파일 선택
                 </label>
                 <input
                   type="file"
                   accept=".gpx"
                   onChange={(e) => setGpxFile(e.target.files?.[0] || null)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   .gpx 형식의 파일만 업로드 가능합니다.
@@ -975,12 +975,12 @@ function SpotsTab() {
 
       {/* 스팟 등록 폼 */}
       {showCreateForm && (
-        <div className="bg-gray-900 rounded-2xl p-6 mb-6">
+        <div className="bg-card rounded-2xl p-6 mb-6 border border-border">
           <h3 className="text-lg font-semibold mb-4">새 제휴 스팟 등록</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   스팟명 *
                 </label>
                 <input
@@ -988,19 +988,19 @@ function SpotsTab() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   카테고리
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="restaurant">음식점</option>
                   <option value="cafe">카페</option>
@@ -1012,7 +1012,7 @@ function SpotsTab() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 설명
               </label>
               <textarea
@@ -1020,13 +1020,13 @@ function SpotsTab() {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             {/* 로고 업로드 */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 로고 이미지
                 <span className="text-xs text-gray-500 ml-2">
                   (권장: 200x200px, 최대 50KB, PNG/JPG)
@@ -1057,7 +1057,7 @@ function SpotsTab() {
 
             {/* 전경사진 업로드 */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 전경사진 (여러 장 가능)
                 <span className="text-xs text-gray-500 ml-2">
                   (권장: 800x600px, 최대 200KB/장, JPG/PNG)
@@ -1100,7 +1100,7 @@ function SpotsTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   대표 메뉴/서비스
                 </label>
                 <input
@@ -1108,11 +1108,11 @@ function SpotsTab() {
                   name="signature_menu"
                   value={formData.signature_menu}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   전화번호
                 </label>
                 <input
@@ -1120,13 +1120,13 @@ function SpotsTab() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 주소 *
               </label>
               <input
@@ -1134,14 +1134,14 @@ function SpotsTab() {
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   운영시간
                 </label>
                 <input
@@ -1150,11 +1150,11 @@ function SpotsTab() {
                   value={formData.open_time}
                   onChange={handleInputChange}
                   placeholder="예: 09:00-22:00"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   할인율 (%)
                 </label>
                 <input
@@ -1164,11 +1164,11 @@ function SpotsTab() {
                   onChange={handleInputChange}
                   min="0"
                   max="100"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   특별 혜택
                 </label>
                 <input
@@ -1177,7 +1177,7 @@ function SpotsTab() {
                   value={formData.special_offer}
                   onChange={handleInputChange}
                   placeholder="예: 음료 1+1"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -1204,12 +1204,12 @@ function SpotsTab() {
 
       {/* 스팟 수정 폼 */}
       {showEditForm && editingSpot && (
-        <div className="bg-gray-900 rounded-2xl p-6 mb-6 border-2 border-blue-500">
+        <div className="bg-card rounded-2xl p-6 mb-6 border-2 border-blue-500">
           <h3 className="text-lg font-semibold mb-4">제휴 스팟 수정 - {editingSpot.name}</h3>
           <form onSubmit={updateSpot} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   스팟명 *
                 </label>
                 <input
@@ -1217,19 +1217,19 @@ function SpotsTab() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   카테고리
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="restaurant">음식점</option>
                   <option value="cafe">카페</option>
@@ -1241,7 +1241,7 @@ function SpotsTab() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 설명
               </label>
               <textarea
@@ -1249,13 +1249,13 @@ function SpotsTab() {
                 value={formData.description}
                 onChange={handleInputChange}
                 rows={3}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             {/* 기존 로고 표시 및 새 로고 업로드 */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 로고 이미지
                 <span className="text-xs text-gray-500 ml-2">
                   (권장: 200x200px, 최대 50KB, PNG/JPG)
@@ -1302,7 +1302,7 @@ function SpotsTab() {
 
             {/* 기존 전경사진 및 새 전경사진 업로드 */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 전경사진
                 <span className="text-xs text-gray-500 ml-2">
                   (권장: 800x600px, 최대 200KB/장, JPG/PNG)
@@ -1376,7 +1376,7 @@ function SpotsTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   대표 메뉴/서비스
                 </label>
                 <input
@@ -1384,11 +1384,11 @@ function SpotsTab() {
                   name="signature_menu"
                   value={formData.signature_menu}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   전화번호
                 </label>
                 <input
@@ -1396,13 +1396,13 @@ function SpotsTab() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 주소 *
               </label>
               <input
@@ -1410,14 +1410,14 @@ function SpotsTab() {
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 required
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   운영시간
                 </label>
                 <input
@@ -1426,11 +1426,11 @@ function SpotsTab() {
                   value={formData.open_time}
                   onChange={handleInputChange}
                   placeholder="예: 09:00-22:00"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   할인율 (%)
                 </label>
                 <input
@@ -1440,11 +1440,11 @@ function SpotsTab() {
                   onChange={handleInputChange}
                   min="0"
                   max="100"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   특별 혜택
                 </label>
                 <input
@@ -1453,7 +1453,7 @@ function SpotsTab() {
                   value={formData.special_offer}
                   onChange={handleInputChange}
                   placeholder="예: 음료 1+1"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-[#00FF88]"
+                  className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
             </div>
@@ -1479,8 +1479,8 @@ function SpotsTab() {
       )}
 
       {/* 등록된 스팟 목록 */}
-      <div className="bg-gray-900 rounded-2xl overflow-hidden">
-        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+      <div className="bg-white rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-border flex justify-between items-center">
           <h3 className="text-lg font-semibold">등록된 제휴 스팟</h3>
           <button
             onClick={loadSpots}
@@ -1570,7 +1570,7 @@ function UsersTab() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">사용자 관리</h2>
-      <div className="bg-gray-900 rounded-2xl p-6">
+      <div className="bg-card rounded-2xl p-6 border border-border">
         <p className="text-gray-400">사용자 관리 기능을 구현 예정입니다.</p>
       </div>
     </div>
@@ -1582,7 +1582,7 @@ function AnalyticsTab() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">통계</h2>
-      <div className="bg-gray-900 rounded-2xl p-6">
+      <div className="bg-card rounded-2xl p-6 border border-border">
         <p className="text-gray-400">통계 기능을 구현 예정입니다.</p>
       </div>
     </div>
@@ -1594,7 +1594,7 @@ function SettingsTab() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">설정</h2>
-      <div className="bg-gray-900 rounded-2xl p-6">
+      <div className="bg-card rounded-2xl p-6 border border-border">
         <p className="text-gray-400">설정 기능을 구현 예정입니다.</p>
       </div>
     </div>

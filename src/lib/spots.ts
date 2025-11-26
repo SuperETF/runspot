@@ -163,12 +163,37 @@ export async function getSpotActiveCoupon(userId: string, spotId: string) {
 export async function createSpotCoupon(
   userId: string,
   spotId: string,
-  runningCompletedAt: Date,
+  runningLogId: string, // 런닝 기록 ID 추가
   authLat: number,
   authLng: number
 ) {
   try {
-    // 스팟 정보 조회
+    // 1. 런닝 기록 확인 (인증 가능 여부 체크)
+    const { data: runningLog, error: logError } = await supabase
+      .from('running_logs')
+      .select('authentication_count, expires_at, completed_at')
+      .eq('id', runningLogId)
+      .single()
+
+    if (logError || !runningLog) {
+      throw new Error('런닝 기록을 찾을 수 없습니다')
+    }
+
+    const log = runningLog as any
+    const now = new Date()
+    const expiresAt = new Date(log.expires_at)
+
+    // 만료 체크
+    if (now > expiresAt) {
+      throw new Error('런닝 인증 시간이 만료되었습니다')
+    }
+
+    // 인증 횟수 체크
+    if (log.authentication_count >= 2) {
+      throw new Error('이미 2곳의 스팟을 인증했습니다')
+    }
+
+    // 2. 스팟 정보 조회
     const { data: spotData, error: spotError } = await supabase
       .from('spots')
       .select('*')
@@ -180,16 +205,29 @@ export async function createSpotCoupon(
 
     const spot = spotData[0]
 
-    // 쿠폰 코드 생성
+    // 3. 이미 이 런닝 기록으로 해당 스팟을 인증했는지 체크
+    const { data: existingCoupon } = await supabase
+      .from('spot_coupons')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('spot_id', spotId)
+      .eq('running_log_id', runningLogId)
+      .single()
+
+    if (existingCoupon) {
+      throw new Error('이미 이 스팟을 인증했습니다')
+    }
+
+    // 4. 쿠폰 코드 생성
     const couponCode = `COUPON_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     // 할인 정보
     const discountInfo = (spot as any).special_offer || `${(spot as any).discount_percentage}% 할인`
     
-    // 만료 시간 (2시간 후)
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
+    // 쿠폰 만료 시간은 런닝 기록의 만료 시간과 동일
+    const couponExpiresAt = log.expires_at
 
-    // 기존 활성 쿠폰이 있다면 비활성화
+    // 5. 기존 활성 쿠폰이 있다면 비활성화
     await (supabase as any)
       .from('spot_coupons')
       .update({ is_active: false })
@@ -197,16 +235,17 @@ export async function createSpotCoupon(
       .eq('spot_id', spotId)
       .eq('is_active', true)
 
-    // 새 쿠폰 생성
+    // 6. 새 쿠폰 생성
     const { data, error } = await (supabase as any)
       .from('spot_coupons')
       .insert({
         user_id: userId,
         spot_id: spotId,
+        running_log_id: runningLogId, // 런닝 기록 ID 연결
         coupon_code: couponCode,
         discount_info: discountInfo,
-        expires_at: expiresAt.toISOString(),
-        running_completed_at: runningCompletedAt.toISOString(),
+        expires_at: couponExpiresAt,
+        running_completed_at: log.completed_at,
         auth_location_lat: authLat,
         auth_location_lng: authLng
       })
@@ -217,7 +256,15 @@ export async function createSpotCoupon(
       throw new Error('쿠폰 생성에 실패했습니다')
     }
 
-    // 스팟 사용 통계 업데이트
+    // 7. 런닝 기록의 authentication_count 증가
+    await (supabase as any)
+      .from('running_logs')
+      .update({ 
+        authentication_count: log.authentication_count + 1
+      })
+      .eq('id', runningLogId)
+
+    // 8. 스팟 사용 통계 업데이트
     await (supabase as any)
       .from('spots')
       .update({ 
@@ -352,7 +399,103 @@ export async function cleanupExpiredCoupons() {
   }
 }
 
-// 사용자의 쿠폰 이력 조회 (활성 쿠폰 + 히스토리)
+// 런닝 기록별 쿠폰 이력 조회 (새로운 방식)
+export async function getRunningLogCouponHistory(userId: string, limit: number = 50) {
+  try {
+    console.log('런닝 기록별 쿠폰 이력 조회 시작 - userId:', userId)
+    
+    // 1. 사용자의 런닝 기록 조회 (최근순, 인증 관련 정보 포함)
+    const { data: runningLogs, error: logsError } = await supabase
+      .from('running_logs')
+      .select(`
+        *,
+        courses (
+          name,
+          area,
+          distance
+        )
+      `)
+      .eq('user_id', userId)
+      .order('completed_at', { ascending: false })
+      .limit(limit)
+
+    if (logsError) {
+      console.error('런닝 로그 조회 오류:', logsError)
+      return []
+    }
+
+    if (!runningLogs || runningLogs.length === 0) {
+      return []
+    }
+
+    // 2. 각 런닝 기록에 연결된 쿠폰들 조회
+    const result = []
+    for (const log of runningLogs) {
+      const logData = log as any
+      
+      // 해당 런닝 기록의 쿠폰들 조회 (활성 + 히스토리)
+      const { data: coupons } = await supabase
+        .from('spot_coupons')
+        .select(`
+          *,
+          spots (
+            name,
+            category,
+            signature_menu,
+            address
+          )
+        `)
+        .eq('running_log_id', logData.id)
+
+      const { data: historyCoupons } = await supabase
+        .from('spot_coupon_history')
+        .select(`
+          *,
+          spots (
+            name,
+            category,
+            signature_menu,
+            address
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('running_log_id', logData.id)
+
+      // 쿠폰 데이터 통합
+      const allCoupons = [
+        ...(coupons || []).map((c: any) => ({
+          ...c,
+          status: c.used_at ? 'used' : (new Date() > new Date(c.expires_at) ? 'expired' : 'active')
+        })),
+        ...(historyCoupons || [])
+      ]
+
+      result.push({
+        running_log: {
+          id: logData.id,
+          completed_at: logData.completed_at,
+          distance: logData.distance,
+          duration: logData.duration,
+          authentication_count: logData.authentication_count || 0,
+          expires_at: logData.expires_at,
+          course: logData.courses
+        },
+        coupons: allCoupons,
+        remaining_auth_count: Math.max(0, 2 - (logData.authentication_count || 0)),
+        is_expired: new Date() > new Date(logData.expires_at)
+      })
+    }
+
+    console.log('런닝 기록별 쿠폰 이력:', result)
+    return result
+
+  } catch (error) {
+    console.error('런닝 기록별 쿠폰 이력 조회 실패:', error)
+    return []
+  }
+}
+
+// 사용자의 쿠폰 이력 조회 (활성 쿠폰 + 히스토리) - 기존 방식 유지
 export async function getUserCouponHistory(userId: string, limit: number = 50) {
   try {
     console.log('쿠폰 이력 조회 시작 - userId:', userId)

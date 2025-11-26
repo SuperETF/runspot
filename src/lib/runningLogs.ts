@@ -1,5 +1,67 @@
 import { supabase } from '@/lib/supabase'
 
+// 인증 가능한 런닝 기록 조회 (2시간 이내, 인증 횟수 2회 미만)
+export async function getAuthenticatableRunningLogs(userId: string) {
+  try {
+    const now = new Date().toISOString()
+    
+    const { data, error } = await supabase
+      .from('running_logs')
+      .select(`
+        *,
+        courses (
+          id,
+          name,
+          area,
+          distance
+        )
+      `)
+      .eq('user_id', userId)
+      .lt('authentication_count', 2) // 2회 미만
+      .gt('expires_at', now) // 아직 만료되지 않음
+      .order('completed_at', { ascending: false })
+
+    if (error) {
+      console.error('인증 가능한 런닝 기록 조회 실패:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('인증 가능한 런닝 기록 조회 중 오류:', error)
+    return []
+  }
+}
+
+// 특정 런닝 기록의 남은 인증 횟수 확인
+export async function getRemainingAuthCount(runningLogId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('running_logs')
+      .select('authentication_count, expires_at')
+      .eq('id', runningLogId)
+      .single()
+
+    if (error || !data) {
+      return 0
+    }
+
+    const record = data as any
+    const now = new Date()
+    const expiresAt = new Date(record.expires_at)
+    
+    // 만료되었으면 0 반환
+    if (now > expiresAt) {
+      return 0
+    }
+
+    return Math.max(0, 2 - (record.authentication_count || 0))
+  } catch (error) {
+    console.error('남은 인증 횟수 확인 중 오류:', error)
+    return 0
+  }
+}
+
 // 사용자의 최근 런닝 로그 가져오기 (코스 정보 포함)
 export async function getRecentRunningLogs(userId: string, limit: number = 10) {
   try {
@@ -154,6 +216,9 @@ export async function saveRunningLog(logData: {
   isCompleted?: boolean
 }) {
   try {
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000) // 2시간 후
+
     const { data, error } = await (supabase
       .from('running_logs') as any)
       .insert({
@@ -165,7 +230,9 @@ export async function saveRunningLog(logData: {
         calories: logData.calories,
         gps_path: logData.gpsPath,
         is_completed: logData.isCompleted || false,
-        completed_at: new Date().toISOString()
+        completed_at: now.toISOString(),
+        authentication_count: 0, // 초기 인증 횟수 0
+        expires_at: expiresAt.toISOString() // 2시간 후 만료
       })
       .select()
 

@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, History, Coffee, Utensils, ShoppingBag, Heart, MapPin, Calendar, Clock, CheckCircle, X, Timer } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { getUserCouponHistory, cleanupExpiredCoupons } from '@/lib/spots'
+import { getRunningLogCouponHistory, cleanupExpiredCoupons } from '@/lib/spots'
 import { getGuestUserId } from '@/lib/auth'
 
 export default function SpotHistoryPage() {
   const router = useRouter()
-  const [couponHistory, setCouponHistory] = useState<any[]>([])
+  const [runningLogHistory, setRunningLogHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string>('')
   const [showCouponModal, setShowCouponModal] = useState(false)
@@ -36,10 +36,10 @@ export default function SpotHistoryPage() {
   const loadCouponHistory = async () => {
     setLoading(true)
     try {
-      const history = await getUserCouponHistory(userId, 50) // 최근 50개
-      setCouponHistory(history)
+      const history = await getRunningLogCouponHistory(userId, 50) // 최근 50개
+      setRunningLogHistory(history)
     } catch (error) {
-      console.error('쿠폰 이력 로딩 오류:', error)
+      console.error('런닝 기록 이력 로딩 오류:', error)
     } finally {
       setLoading(false)
     }
@@ -88,25 +88,25 @@ export default function SpotHistoryPage() {
     switch (status) {
       case 'used':
         return (
-          <div className="text-[#00FF88] text-sm font-medium">
+          <div className="text-primary text-sm font-medium">
             사용완료
           </div>
         )
       case 'expired':
         return (
-          <div className="text-gray-400 text-sm font-medium">
+          <div className="text-muted-foreground text-sm font-medium">
             만료됨
           </div>
         )
       case 'active':
         return (
-          <div className="text-[#00FF88] text-sm font-medium">
+          <div className="text-primary text-sm font-medium">
             인증완료
           </div>
         )
       default:
         return (
-          <div className="text-gray-400 text-sm font-medium">
+          <div className="text-muted-foreground text-sm font-medium">
             인증완료
           </div>
         )
@@ -115,13 +115,13 @@ export default function SpotHistoryPage() {
 
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       {/* 상단 헤더 - 모바일 알림창 피하기 */}
-      <div className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-gray-800 safe-top">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border safe-top">
         <div className="flex items-center justify-between px-4 py-3">
           <button 
             onClick={() => router.push('/')}
-            className="p-2 hover:bg-gray-800 rounded-xl transition-colors"
+            className="p-2 hover:bg-muted rounded-xl transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
@@ -133,11 +133,11 @@ export default function SpotHistoryPage() {
       <div className="px-4 py-6 space-y-6">
         {/* 헤더 섹션 */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-[#00FF88] rounded-full flex items-center justify-center mx-auto mb-4">
-            <History className="w-8 h-8 text-black" />
+          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <History className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">인증 완료 내역</h2>
-          <p className="text-gray-400">스팟에서 완주 인증한 모든 기록을 확인하세요</p>
+          <h2 className="text-xl font-bold text-foreground mb-2">인증 완료 내역</h2>
+          <p className="text-muted-foreground">스팟에서 완주 인증한 모든 기록을 확인하세요</p>
         </div>
 
 
@@ -147,115 +147,112 @@ export default function SpotHistoryPage() {
             // 로딩 스켈레톤
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="bg-gray-900/80 rounded-2xl p-4 border border-gray-800 animate-pulse">
+                <div key={index} className="bg-card/80 rounded-2xl p-4 border border-border animate-pulse">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-700 rounded-xl"></div>
+                    <div className="w-12 h-12 bg-muted/80 rounded-xl"></div>
                     <div className="flex-1">
-                      <div className="h-4 bg-gray-700 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-700 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                      <div className="h-4 bg-muted/80 rounded mb-2"></div>
+                      <div className="h-3 bg-muted/80 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-muted/80 rounded w-1/2"></div>
                     </div>
-                    <div className="w-16 h-6 bg-gray-700 rounded"></div>
+                    <div className="w-16 h-6 bg-muted/80 rounded"></div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : couponHistory.length > 0 ? (
-            <div className="space-y-4">
-              {couponHistory.map((history, index) => (
+          ) : runningLogHistory.length > 0 ? (
+            <div className="space-y-6">
+              {runningLogHistory.map((logGroup, groupIndex) => (
                 <div 
-                  key={index} 
-                  onClick={() => handleCouponClick(history)}
-                  className={`bg-gray-900/80 glass rounded-2xl p-4 border border-gray-800 hover:border-gray-700 transition-all duration-300 animate-fade-in-up ${
-                    history.status === 'active' ? 'cursor-pointer hover:bg-gray-800/60' : 'cursor-default'
-                  }`}
-                  style={{ animationDelay: `${index * 0.05}s` }}
+                  key={groupIndex} 
+                  className="bg-card/80 glass rounded-2xl p-4 border border-border transition-all duration-300 animate-fade-in-up"
+                  style={{ animationDelay: `${groupIndex * 0.05}s` }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-white">{history.spots?.name || '알 수 없는 스팟'}</h3>
-                      <p className="text-sm text-gray-400">{history.spots?.signature_menu}</p>
-                    </div>
-                    {getStatusBadge(history.status)}
-                  </div>
-
-                  <div className="bg-gray-800/50 rounded-xl p-3 mb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-400">혜택</span>
-                      <span className="text-[#00FF88] font-medium">{history.discount_info}</span>
-                    </div>
-                    {history.status === 'active' && (
-                      <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-1">유효시간</p>
-                        <p className="text-[#00FF88] font-bold text-lg">
-                          {getRemainingTime(history.expired_at)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        발급일시
-                      </span>
-                      <span className="text-gray-300">
-                        {new Date(history.issued_at || history.created_at).toLocaleString('ko-KR', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                    
-                    {history.used_at && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          사용일시
-                        </span>
-                        <span className="text-[#00FF88]">
-                          {new Date(history.used_at).toLocaleString('ko-KR', {
+                  {/* 런닝 기록 헤더 */}
+                  <div className="mb-4 pb-4 border-b border-border">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-bold text-foreground text-lg">
+                          {logGroup.running_log.course?.name || '런닝 완주'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(logGroup.running_log.completed_at).toLocaleString('ko-KR', {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'
                           })}
-                        </span>
+                        </p>
                       </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        만료일시
-                      </span>
-                      <span className="text-gray-300">
-                        {new Date(history.expired_at).toLocaleString('ko-KR', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                      <div className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                        logGroup.is_expired 
+                          ? 'bg-muted text-muted-foreground' 
+                          : 'bg-primary/20 text-primary'
+                      }`}>
+                        {logGroup.is_expired ? '만료됨' : `${logGroup.remaining_auth_count}곳 인증 가능`}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>거리: {(logGroup.running_log.distance / 1000).toFixed(2)}km</span>
+                      <span>시간: {Math.floor(logGroup.running_log.duration / 60)}분</span>
+                      <span>인증: {logGroup.running_log.authentication_count}/2곳</span>
                     </div>
                   </div>
+
+                  {/* 인증한 스팟 목록 */}
+                  {logGroup.coupons.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground">인증한 스팟</h4>
+                      {logGroup.coupons.map((coupon: any, couponIndex: number) => (
+                        <div 
+                          key={couponIndex}
+                          onClick={() => handleCouponClick(coupon)}
+                          className={`bg-muted/30 rounded-xl p-3 border border-border ${
+                            coupon.status === 'active' ? 'cursor-pointer hover:bg-muted/50' : ''
+                          } transition-colors`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h5 className="font-semibold text-foreground">{coupon.spots?.name || '알 수 없는 스팟'}</h5>
+                              <p className="text-xs text-muted-foreground">{coupon.spots?.signature_menu}</p>
+                            </div>
+                            {getStatusBadge(coupon.status)}
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">혜택</span>
+                            <span className="text-primary font-medium">{coupon.discount_info}</span>
+                          </div>
+                          
+                          {coupon.status === 'active' && (
+                            <div className="mt-2 text-center">
+                              <p className="text-xs text-muted-foreground">남은 시간</p>
+                              <p className="text-primary font-bold">
+                                {getRemainingTime(coupon.expired_at || coupon.expires_at)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      아직 인증한 스팟이 없습니다
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             // 빈 상태
             <div className="text-center py-12">
-              <History className="w-16 h-16 text-gray-600 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold text-gray-400 mb-2">
+              <History className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                 인증 완료 내역이 없습니다
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-muted-foreground mb-6">
                 스팟에서 완주 인증을 해보세요!
               </p>
             </div>
@@ -269,18 +266,18 @@ export default function SpotHistoryPage() {
       {/* 쿠폰 모달 */}
       {showCouponModal && selectedCoupon && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-3xl p-6 max-w-sm w-full border border-gray-800 relative overflow-hidden">
+          <div className="bg-card rounded-3xl p-6 max-w-sm w-full border border-border relative overflow-hidden">
             {/* 배경 패턴 */}
             <div className="absolute inset-0 opacity-5">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#00FF88] to-transparent"></div>
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary to-transparent"></div>
             </div>
             
             {/* 닫기 버튼 */}
             <button 
               onClick={() => setShowCouponModal(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-800 rounded-xl transition-colors z-50"
+              className="absolute top-4 right-4 p-2 hover:bg-muted rounded-xl transition-colors z-50"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
 
             <div className="relative z-10">
@@ -288,24 +285,24 @@ export default function SpotHistoryPage() {
                 <>
                   {/* 성공 아이콘 */}
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-[#00FF88] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                       <CheckCircle className="w-8 h-8 text-black" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">인증 완료!</h3>
-                    <p className="text-gray-400 text-sm">완주 인증이 성공적으로 완료되었습니다</p>
+                    <h3 className="text-xl font-bold text-foreground mb-2">인증 완료!</h3>
+                    <p className="text-muted-foreground text-sm">완주 인증이 성공적으로 완료되었습니다</p>
                   </div>
 
                   {/* 쿠폰 정보 */}
-                  <div className="bg-gradient-to-r from-[#00FF88]/20 to-[#00FF88]/10 border border-[#00FF88]/30 rounded-2xl p-4 mb-4">
+                  <div className="bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 rounded-2xl p-4 mb-4">
                     <div className="text-center">
-                      <h4 className="text-lg font-semibold text-white mb-1">{selectedCoupon.spots?.name}</h4>
-                      <p className="text-[#00FF88] font-medium text-lg mb-3">{selectedCoupon.discount_info}</p>
+                      <h4 className="text-lg font-semibold text-foreground mb-1">{selectedCoupon.spots?.name}</h4>
+                      <p className="text-primary font-medium text-lg mb-3">{selectedCoupon.discount_info}</p>
                       
                       {/* 유효시간 강조 */}
                       <div className="bg-black/30 rounded-lg p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-gray-400">발급일시</p>
-                          <p className="text-xs text-white">
+                          <p className="text-xs text-muted-foreground">발급일시</p>
+                          <p className="text-xs text-foreground">
                             {new Date(selectedCoupon.issued_at || selectedCoupon.created_at).toLocaleString('ko-KR', {
                               month: 'short',
                               day: 'numeric',
@@ -316,8 +313,8 @@ export default function SpotHistoryPage() {
                           </p>
                         </div>
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs text-gray-400">만료시간</p>
-                          <p className="text-xs text-white">
+                          <p className="text-xs text-muted-foreground">만료시간</p>
+                          <p className="text-xs text-foreground">
                             {new Date(selectedCoupon.expired_at).toLocaleString('ko-KR', {
                               month: 'short',
                               day: 'numeric',
@@ -327,8 +324,8 @@ export default function SpotHistoryPage() {
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-gray-400 mb-1">유효시간</p>
-                          <p className="text-[#00FF88] font-bold text-xl">
+                          <p className="text-xs text-muted-foreground mb-1">유효시간</p>
+                          <p className="text-primary font-bold text-xl">
                             {getRemainingTime(selectedCoupon.expired_at)}
                           </p>
                         </div>
@@ -337,8 +334,8 @@ export default function SpotHistoryPage() {
                   </div>
 
                   {/* 사용 안내 */}
-                  <div className="bg-gray-800/50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 text-center">
+                  <div className="bg-muted/50 rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground text-center">
                       이 화면을 매장에서 보여주세요<br/>
                       스크린샷은 인정되지 않습니다
                     </p>
@@ -352,7 +349,7 @@ export default function SpotHistoryPage() {
                       <X className="w-8 h-8 text-white" />
                     </div>
                     <h3 className="text-xl font-bold text-red-400 mb-2">만료된 인증입니다</h3>
-                    <p className="text-gray-400 text-sm mb-4">이 쿠폰은 유효시간이 지났습니다</p>
+                    <p className="text-muted-foreground text-sm mb-4">이 쿠폰은 유효시간이 지났습니다</p>
                     
                     <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
                       <p className="text-red-400 text-sm">
@@ -368,18 +365,18 @@ export default function SpotHistoryPage() {
       )}
 
       {/* 하단 탭 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-xl border-t border-gray-800/50 safe-bottom">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border safe-bottom">
         <div className="flex items-center justify-around py-2">
           <button 
             onClick={() => router.push('/spots')}
-            className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group"
+            className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group"
           >
-            <MapPin className="w-6 h-6 text-gray-400 group-hover:text-[#00FF88] group-hover:scale-110 transition-all" />
-            <span className="text-xs text-gray-400 group-hover:text-[#00FF88] transition-colors">스팟</span>
+            <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary group-hover:scale-110 transition-all" />
+            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">스팟</span>
           </button>
-          <button className="flex flex-col items-center gap-1 p-3 hover:bg-gray-800/50 rounded-xl transition-all duration-200 group">
-            <Clock className="w-6 h-6 text-[#00FF88] group-hover:scale-110 transition-transform" />
-            <span className="text-xs text-[#00FF88] font-medium">인증 내역</span>
+          <button className="flex flex-col items-center gap-1 p-3 hover:bg-muted/50 rounded-xl transition-all duration-200 group">
+            <Clock className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+            <span className="text-xs text-primary font-medium">인증 내역</span>
           </button>
         </div>
       </div>
