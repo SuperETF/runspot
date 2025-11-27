@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, MapPin, Clock, Phone, Navigation, X, CheckCircle, AlertCircle, Heart, ChevronLeft, ChevronRight, Coffee, Utensils, ShoppingBag, Dumbbell, Wrench, Play } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Phone, Navigation, X, CheckCircle, AlertCircle, Heart, ChevronLeft, ChevronRight, Coffee, Utensils, ShoppingBag, Dumbbell, Wrench, Play, Store } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { getSpots, getNearbySpots, getUserActiveCoupons, getSpotActiveCoupon, createSpotCoupon, cleanupExpiredCoupons, getUserCouponHistory, type SpotWithDistance } from '@/lib/spots'
 import type { Spot } from '@/types/database'
@@ -572,6 +572,15 @@ export default function SpotsPage() {
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">런 - 스팟</h2>
           <p className="text-muted-foreground">러너들을 위한 혜택을 제공하는 파트너 매장들</p>
+          
+          {/* 제휴 스팟 등록하기 버튼 */}
+          <button
+            onClick={() => router.push('/spot/register')}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-all transform hover:scale-105 shadow-md font-semibold text-sm"
+          >
+            <Store className="w-4 h-4" />
+            제휴 스팟 등록하기
+          </button>
         </div>
 
 

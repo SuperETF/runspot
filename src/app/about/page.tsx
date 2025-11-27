@@ -406,7 +406,7 @@ export default function AboutPage() {
               RunSpot과 함께<br className="sm:hidden" /> 새로운 고객을 만나보세요
             </p>
             <button 
-              onClick={() => router.push('/admin/spot')}
+              onClick={() => router.push('/spot/register')}
               className="inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 md:px-10 py-3 sm:py-4 md:py-5 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-all transform hover:scale-105 shadow-xl text-sm sm:text-base md:text-lg"
             >
               <Store className="w-5 h-5 sm:w-6 sm:h-6" />
