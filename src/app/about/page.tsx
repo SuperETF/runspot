@@ -107,23 +107,23 @@ export default function AboutPage() {
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-black to-gray-800 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-md group-hover:scale-110 transition-transform duration-300">
                   <Users className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black mb-3 sm:mb-4 bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">러너들의 고민</h3>
-                <ul className="space-y-3 sm:space-y-4 text-sm sm:text-base text-gray-700">
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">새로운 런닝 코스를 찾기 어려워요</span>
+                <h3 className="text-xl sm:text-2xl font-black mb-4 sm:mb-5 bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">러너들의 고민</h3>
+                <ul className="space-y-2 sm:space-y-2.5">
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">코스 찾기 어려움</span>
                   </li>
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">런닝 후 혜택이나 보상이 없어요</span>
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">혜택 없음</span>
                   </li>
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">친구들과 함께 달리기 어려워요</span>
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">함께 달리기 어려움</span>
                   </li>
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">런닝 기록 관리가 번거로워요</span>
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">기록 관리 번거로움</span>
                   </li>
                 </ul>
               </div>
@@ -138,23 +138,23 @@ export default function AboutPage() {
                 <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-black to-gray-800 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-md group-hover:scale-110 transition-transform duration-300">
                   <Store className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-xl sm:text-2xl font-black mb-3 sm:mb-4 bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">가게의 고민</h3>
-                <ul className="space-y-3 sm:space-y-4 text-sm sm:text-base text-gray-700">
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">새로운 고객 유치가 어려워요</span>
+                <h3 className="text-xl sm:text-2xl font-black mb-4 sm:mb-5 bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">가게의 고민</h3>
+                <ul className="space-y-2 sm:space-y-2.5">
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">고객 유치 어려움</span>
                   </li>
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">광고비가 너무 비싸요</span>
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">광고비 부담</span>
                   </li>
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">타겟 고객에게 도달하기 힘들어요</span>
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">타겟 도달 어려움</span>
                   </li>
-                  <li className="flex items-start gap-3 group/item hover:translate-x-1 transition-transform duration-200">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-xs mt-0.5">✗</span>
-                    <span className="leading-relaxed">효과적인 홍보 방법이 없어요</span>
+                  <li className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50/50 border border-red-100 group/item hover:bg-red-50 hover:border-red-200 transition-all duration-200">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">✗</span>
+                    <span className="text-sm sm:text-base text-gray-800 font-medium">효과적 홍보 방법 부재</span>
                   </li>
                 </ul>
               </div>
@@ -165,59 +165,47 @@ export default function AboutPage() {
 
       {/* Main Features Section */}
       <section id="features" className="py-16 sm:py-20 md:py-24 bg-black text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-12 sm:mb-16 md:mb-20">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-3 sm:mb-4 leading-tight px-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-3 sm:mb-4 leading-tight">
               핵심 기능
             </h2>
-            <p className="text-lg sm:text-xl text-gray-400 px-4">
-              러너를 위한<br className="sm:hidden" /> 완벽한 런닝 플랫폼
+            <p className="text-lg sm:text-xl text-gray-400">
+              러너를 위한 완벽한 런닝 플랫폼
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6">
             {/* Feature 1 */}
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/10 hover:border-white/30 transition-all hover:transform hover:scale-105">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-                <MapPin className="w-7 h-7 sm:w-8 sm:h-8 text-black" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">코스 탐색</h3>
-              <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-                서울 전역의 검증된 런닝 코스를 지도에서 한눈에 확인하고, 난이도와 거리별로 필터링하여 나에게 맞는 코스를 찾아보세요.
-              </p>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-center">코스 탐색</h3>
             </div>
 
             {/* Feature 2 */}
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/10 hover:border-white/30 transition-all hover:transform hover:scale-105">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-                <Users className="w-7 h-7 sm:w-8 sm:h-8 text-black" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <Users className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">친구 시스템</h3>
-              <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-                친구를 추가하고 함께 달리세요. QR 코드로 간편하게 친구를 추가할 수 있습니다.
-              </p>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-center">친구 시스템</h3>
             </div>
 
             {/* Feature 3 */}
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/10 hover:border-white/30 transition-all hover:transform hover:scale-105">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-                <Award className="w-7 h-7 sm:w-8 sm:h-8 text-black" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <Award className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">완주 인증</h3>
-              <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-                GPS 자동 인증과 OCR 스크린샷 인증으로 런닝 기록을 정확하게 저장하고 관리할 수 있습니다.
-              </p>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-center">완주 인증</h3>
             </div>
 
             {/* Feature 4 */}
             <div className="bg-white/5 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-white/10 hover:border-white/30 transition-all hover:transform hover:scale-105">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6">
-                <Heart className="w-7 h-7 sm:w-8 sm:h-8 text-black" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 mx-auto">
+                <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-black" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">코스 리뷰</h3>
-              <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-                다른 러너들의 리뷰와 평점을 확인하고, 나만의 런닝 경험을 공유하여 커뮤니티를 만들어가세요.
-              </p>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-center">코스 리뷰</h3>
             </div>
           </div>
         </div>
@@ -494,7 +482,6 @@ export default function AboutPage() {
 
           <div className="border-t border-white/10 pt-8 text-center text-sm text-gray-400">
             <p>© 2025 RunSpot. All rights reserved.</p>
-            <p className="mt-2">Made with ❤️ in Seoul</p>
           </div>
         </div>
       </footer>
