@@ -552,6 +552,12 @@ export default function ProfilePage() {
                 <span className="text-foreground">앱 정보</span>
               </button>
               <button 
+                onClick={() => router.push('/frc')}
+                className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors border-b border-border"
+              >
+                <span className="text-foreground">FRC 커뮤니티</span>
+              </button>
+              <button 
                 onClick={handleSignOut}
                 className="w-full px-6 py-4 text-left hover:bg-muted/50 transition-colors text-red-400"
               >
