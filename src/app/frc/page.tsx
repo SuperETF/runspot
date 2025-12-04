@@ -276,7 +276,9 @@ export default function FRCPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9]">
+    <div className="min-h-screen bg-slate-200">
+      {/* 모바일 뷰 래퍼 - 웹에서도 모바일처럼 보이도록 */}
+      <div className="max-w-md mx-auto bg-[#F6F7F9] min-h-screen shadow-xl">
       {/* 헤더 */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
         <div className="flex items-center justify-center px-4 h-14">
@@ -889,7 +891,7 @@ export default function FRCPage() {
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-4 py-3 safe-area-bottom">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 px-4 py-3 safe-area-bottom">
         <button
           onClick={() => setShowDevModal(true)}
           className="w-full py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold"
@@ -1648,6 +1650,7 @@ export default function FRCPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
