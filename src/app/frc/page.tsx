@@ -70,8 +70,22 @@ export default function FRCPage() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [applicationCounts, setApplicationCounts] = useState<Record<string, number>>({})
 
+  // 홍보 팝업 모달
+  const [showPromoModal, setShowPromoModal] = useState(false)
+  const [promoSlide, setPromoSlide] = useState(0)
+
   useEffect(() => {
     loadData()
+    
+    // 오늘 하루 그만보기 체크
+    const hideUntil = localStorage.getItem('frc_promo_hide_until')
+    if (hideUntil) {
+      const hideDate = new Date(hideUntil)
+      if (new Date() < hideDate) {
+        return // 아직 숨김 기간
+      }
+    }
+    setShowPromoModal(true)
   }, [])
 
   const loadData = async () => {
@@ -244,6 +258,21 @@ export default function FRCPage() {
     setAgreeTerms(false)
     setAgreePrivacy(false)
     setApplyScheduleId(null)
+  }
+
+  // 오늘 하루 그만보기
+  const hidePromoForToday = () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(0, 0, 0, 0)
+    localStorage.setItem('frc_promo_hide_until', tomorrow.toISOString())
+    setShowPromoModal(false)
+  }
+
+  // 홍보 모달에서 신청하기
+  const handlePromoApply = (scheduleId: string) => {
+    setShowPromoModal(false)
+    openApplyModal(scheduleId)
   }
 
   return (
@@ -1524,6 +1553,96 @@ export default function FRCPage() {
                 className="w-full py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold"
               >
                 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 홍보 팝업 모달 */}
+      {showPromoModal && upcomingSchedules.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* 헤더 */}
+            <div className="relative bg-slate-900 p-5 text-center">
+              <button
+                onClick={() => setShowPromoModal(false)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"
+              >
+                <span className="text-white text-lg">×</span>
+              </button>
+              <Image
+                src="/frclogo/33.png"
+                alt="FRC 로고"
+                width={60}
+                height={60}
+                className="mx-auto mb-2"
+              />
+              <h3 className="text-white font-bold text-lg">다가오는 런닝</h3>
+              <p className="text-white/60 text-[11px] mt-1">FRC와 함께 달려요!</p>
+            </div>
+
+            {/* 런닝 목록 */}
+            <div className="p-4 max-h-[300px] overflow-y-auto">
+              <div className="space-y-3">
+                {upcomingSchedules.slice(0, 3).map((schedule) => (
+                  <div 
+                    key={schedule.id}
+                    onClick={() => handlePromoApply(schedule.id)}
+                    className="rounded-xl bg-slate-50 p-3 cursor-pointer hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`inline-flex items-center rounded-full px-2 py-[2px] text-[9px] font-medium ${
+                            schedule.is_regular 
+                              ? 'bg-slate-900 text-white' 
+                              : 'bg-violet-600 text-white'
+                          }`}>
+                            {schedule.is_regular ? '정기' : '특별'}
+                          </span>
+                          <span className="text-[10px] text-slate-500">{schedule.schedule_date}</span>
+                        </div>
+                        <p className="text-[13px] font-semibold text-slate-900">{schedule.title}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          {schedule.time} · {schedule.location}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-3">
+                        <p className="text-[14px] font-bold text-slate-900">{schedule.distance}</p>
+                        <p className="text-[10px] text-slate-500">{schedule.pace}/km</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-slate-400" />
+                        <span className="text-[10px] text-slate-500">
+                          {schedule.max_participants 
+                            ? `${applicationCounts[schedule.id] || 0}/${schedule.max_participants}명`
+                            : `${applicationCounts[schedule.id] || 0}명`
+                          }
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-violet-600 font-medium">신청하기 →</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 하단 버튼 */}
+            <div className="p-4 pt-0 space-y-2">
+              <button
+                onClick={() => setShowPromoModal(false)}
+                className="w-full py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold"
+              >
+                확인
+              </button>
+              <button
+                onClick={hidePromoForToday}
+                className="w-full py-2 text-[11px] text-slate-400"
+              >
+                오늘 하루 그만보기
               </button>
             </div>
           </div>

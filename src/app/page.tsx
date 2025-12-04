@@ -3,12 +3,15 @@
 import { useState, useEffect, lazy, Suspense, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { MapPin, Play, Bookmark, User, Navigation, Home as HomeIcon, Store, Mail, X, Users } from 'lucide-react'
+import { MapPin, Play, Bookmark, User, Navigation, Home as HomeIcon, Store, Mail, X, Users, Lock } from 'lucide-react'
 import { GPSCoordinate, FriendLocationData } from '@/types/database'
 import { getNearbyCoursesFromLocation, getCourses } from '@/lib/courses'
 import { getCurrentUser, signOut } from '@/lib/auth'
 import { getUserProfile } from '@/lib/profile'
 import { supabase } from '@/lib/supabase'
+
+// 개발 모드 비밀번호
+const DEV_PASSWORD = '041200'
 
 // 무거운 컴포넌트들을 지연 로딩
 import KakaoMapWrapper from '@/components/common/KakaoMapWrapper'
@@ -32,6 +35,12 @@ const BookmarkButton = lazy(() => import('@/components/BookmarkButton'))
 
 export default function Home() {
   const router = useRouter()
+  
+  // 비밀번호 보호
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState(false)
+  
   const [nearbyCourses, setNearbyCourses] = useState<any[]>([])
   const [allCourses, setAllCourses] = useState<any[]>([])
   const [userLocation, setUserLocation] = useState<GPSCoordinate | null>(null)
@@ -56,8 +65,30 @@ export default function Home() {
   const center = useMemo(() => ({ lat: 37.5285, lng: 126.9400 }), [])
   const [mapCenter, setMapCenter] = useState<GPSCoordinate>(center)
 
+  // 비밀번호 세션 체크
+  useEffect(() => {
+    const devAuth = sessionStorage.getItem('runspot_dev_auth')
+    if (devAuth === 'true') {
+      setIsAuthenticated(true)
+    }
+  }, [])
+
+  // 비밀번호 확인
+  const handlePasswordSubmit = () => {
+    if (password === DEV_PASSWORD) {
+      setIsAuthenticated(true)
+      sessionStorage.setItem('runspot_dev_auth', 'true')
+      setPasswordError(false)
+    } else {
+      setPasswordError(true)
+      setPassword('')
+    }
+  }
+
   // 로그인 상태 확인
   useEffect(() => {
+    if (!isAuthenticated) return
+    
     // 회원가입 메시지를 먼저 확인
     checkSignupMessage()
     // 그 다음 인증 상태 확인
@@ -66,7 +97,7 @@ export default function Home() {
     }, 100)
     // 위치 권한 자동 확인
     checkLocationPermission()
-  }, [])
+  }, [isAuthenticated])
 
   // 위치 권한 자동 확인
   const checkLocationPermission = async () => {
@@ -491,6 +522,47 @@ export default function Home() {
     setShowLocationPermission(false)
     // 기본 위치(서울)로 설정
     setMapCenter({ lat: 37.5665, lng: 126.9780 })
+  }
+
+  // 비밀번호 입력 화면
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl p-8 w-full max-w-sm">
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-slate-600" />
+            </div>
+          </div>
+          <h1 className="text-xl font-bold text-slate-900 text-center mb-2">RunSpot</h1>
+          <p className="text-sm text-slate-500 text-center mb-6">개발 중인 서비스입니다</p>
+          
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+            placeholder="비밀번호를 입력하세요"
+            className={`w-full px-4 py-3 rounded-xl border ${passwordError ? 'border-red-400' : 'border-slate-200'} text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-slate-300`}
+            autoFocus
+          />
+          {passwordError && (
+            <p className="text-red-500 text-xs text-center mt-2">비밀번호가 올바르지 않습니다</p>
+          )}
+          
+          <button
+            onClick={handlePasswordSubmit}
+            className="w-full mt-4 py-3 rounded-xl bg-slate-900 text-white font-semibold"
+          >
+            확인
+          </button>
+          
+          <p className="text-xs text-slate-400 text-center mt-6">
+            접근 권한이 필요하시면 관리자에게 문의하세요
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
