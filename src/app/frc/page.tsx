@@ -18,14 +18,12 @@ import {
   Award,
   Rocket,
   Loader2,
-  Check
+  Check,
+  X
 } from 'lucide-react'
 import {
-  getCrewMembers,
-  getCrewSchedules,
   getCrewGallery,
   getCrewStats,
-  getUpcomingSchedules,
   calculateDday,
   type CrewMember,
   type CrewSchedule,
@@ -60,6 +58,10 @@ export default function FRCPage() {
   const [applySubmitting, setApplySubmitting] = useState(false)
   const [showTermsDetail, setShowTermsDetail] = useState<'terms' | 'privacy' | null>(null)
   const [showCrewNoticeModal, setShowCrewNoticeModal] = useState(false)
+  const [isCrewMember, setIsCrewMember] = useState(false) // 크루원 여부
+  const [crewMemberSearch, setCrewMemberSearch] = useState('') // 크루원 검색어
+  const [selectedCrewMember, setSelectedCrewMember] = useState<any>(null) // 선택된 크루원
+  const [allMembers, setAllMembers] = useState<any[]>([]) // 전체 멤버 (마스킹 안된)
 
   // DB 데이터 상태
   const [members, setMembers] = useState<CrewMember[]>([])
@@ -73,6 +75,19 @@ export default function FRCPage() {
   // 홍보 팝업 모달
   const [showPromoModal, setShowPromoModal] = useState(false)
   const [promoSlide, setPromoSlide] = useState(0)
+
+  // 멤버 가입 신청 모달
+  const [showMemberApplyModal, setShowMemberApplyModal] = useState(false)
+  const [memberApplyStep, setMemberApplyStep] = useState(0) // 0: 약관동의, 1: 이름, 2: 전화번호/카카오ID, 3: 완료
+  const [memberApplyForm, setMemberApplyForm] = useState({
+    name: '',
+    phone: '',
+    kakaoId: ''
+  })
+  const [memberAgreeTerms, setMemberAgreeTerms] = useState(false)
+  const [memberAgreePrivacy, setMemberAgreePrivacy] = useState(false)
+  const [memberApplySubmitting, setMemberApplySubmitting] = useState(false)
+  const [showMemberTermsDetail, setShowMemberTermsDetail] = useState<'terms' | 'privacy' | null>(null)
 
   useEffect(() => {
     loadData()
@@ -91,40 +106,82 @@ export default function FRCPage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [membersData, schedulesData, galleryData, statsData, upcomingData] = await Promise.all([
-        getCrewMembers(),
-        getCrewSchedules(),
-        getCrewGallery(20), // 최대 20장 (2x2 그리드 5세트)
+      
+      // Notion에서 일정/멤버 조회, Supabase에서 갤러리/통계 조회
+      const [schedulesRes, upcomingRes, membersRes, galleryData, statsData, appCountsRes] = await Promise.all([
+        fetch('/api/notion/schedules'),
+        fetch('/api/notion/schedules?upcoming=true&limit=5'),
+        fetch('/api/notion/members'),
+        getCrewGallery(20),
         getCrewStats(),
-        getUpcomingSchedules(5) // 다가오는 일정 최대 5개
+        fetch('/api/notion/applications')
       ])
 
-      setMembers(membersData)
-      setSchedules(schedulesData)
+      const schedulesData = await schedulesRes.json()
+      const upcomingData = await upcomingRes.json()
+      const membersData = await membersRes.json()
+      const appCounts = await appCountsRes.json()
+
+      // Notion 데이터를 기존 타입에 맞게 변환
+      const formattedSchedules: CrewSchedule[] = (schedulesData || []).map((s: any) => ({
+        id: s.id,
+        crew_id: 'frc-001',
+        title: s.title,
+        description: s.description,
+        schedule_date: s.schedule_date,
+        schedule_day: null,
+        time: s.time,
+        location: s.location,
+        distance: s.distance,
+        pace: s.pace,
+        max_participants: s.max_participants,
+        is_regular: s.is_regular,
+        is_completed: s.is_completed,
+        is_active: true,
+        created_at: '',
+        updated_at: '',
+      }))
+
+      const formattedUpcoming: CrewSchedule[] = (upcomingData || []).map((s: any) => ({
+        id: s.id,
+        crew_id: 'frc-001',
+        title: s.title,
+        description: s.description,
+        schedule_date: s.schedule_date,
+        schedule_day: null,
+        time: s.time,
+        location: s.location,
+        distance: s.distance,
+        pace: s.pace,
+        max_participants: s.max_participants,
+        is_regular: s.is_regular,
+        is_completed: s.is_completed,
+        is_active: true,
+        created_at: '',
+        updated_at: '',
+      }))
+
+      const formattedMembers: CrewMember[] = (membersData || []).map((m: any) => ({
+        id: m.id,
+        crew_id: 'frc-001',
+        user_id: null,
+        name: m.name,
+        role: m.role,
+        pace: m.pace,
+        main_distance: m.main_distance,
+        profile_image: m.profile_image,
+        link_url: m.link_url,
+        is_active: m.is_active,
+        joined_at: '',
+        created_at: '',
+      }))
+
+      setSchedules(formattedSchedules)
+      setUpcomingSchedules(formattedUpcoming)
+      setMembers(formattedMembers)
       setGallery(galleryData)
       setStats(statsData)
-      setUpcomingSchedules(upcomingData)
-
-      // 일정별 신청자 수 로드
-      const allScheduleIds = [
-        ...schedulesData.map((s: CrewSchedule) => s.id),
-        ...upcomingData.map((s: CrewSchedule) => s.id)
-      ]
-      if (allScheduleIds.length > 0) {
-        const { supabase } = await import('@/lib/supabase')
-        const { data: appsData } = await (supabase as any)
-          .from('schedule_applications')
-          .select('schedule_id')
-          .in('schedule_id', allScheduleIds)
-        
-        if (appsData) {
-          const counts: Record<string, number> = {}
-          appsData.forEach((app: { schedule_id: string }) => {
-            counts[app.schedule_id] = (counts[app.schedule_id] || 0) + 1
-          })
-          setApplicationCounts(counts)
-        }
-      }
+      setApplicationCounts(appCounts || {})
     } catch (error) {
       // 에러 시 기본값 유지
     } finally {
@@ -143,9 +200,9 @@ export default function FRCPage() {
     return () => clearInterval(interval)
   }, [upcomingSchedules.length])
 
-  // 통계 데이터 (하드코딩)
+  // 통계 데이터 (멤버 수는 실제 활성 멤버 수 반영)
   const crewStatsData = [
-    { label: '총 멤버', value: '239명', icon: Users },
+    { label: '총 멤버', value: `${members.length}명`, icon: Users },
     { label: '총 거리', value: '1,092km', icon: MapPin },
     { label: '평균 페이스', value: '6:50', icon: Clock },
   ]
@@ -157,7 +214,19 @@ export default function FRCPage() {
   }
 
   // 런닝 신청 모달 열기
+  // 모집 마감 모달
+  const [showClosedModal, setShowClosedModal] = useState(false)
+
   const openApplyModal = (scheduleId: string) => {
+    // 제한 인원 체크
+    const schedule = [...schedules, ...upcomingSchedules].find(s => s.id === scheduleId)
+    const currentCount = applicationCounts[schedule?.title || ''] || 0
+    
+    if (schedule?.max_participants && currentCount >= schedule.max_participants) {
+      setShowClosedModal(true)
+      return
+    }
+    
     setShowScheduleDetail(false) // 상세 모달 닫기
     setApplyScheduleId(scheduleId)
     setApplyStep(-1) // 크루원/게스트 선택부터 시작
@@ -167,15 +236,79 @@ export default function FRCPage() {
     setShowApplyModal(true)
   }
 
-  // 크루원 선택 시
-  const handleCrewMemberSelect = () => {
-    setShowApplyModal(false)
-    setShowCrewNoticeModal(true)
+  // 크루원 선택 시 - 멤버 목록 조회
+  const handleCrewMemberSelect = async () => {
+    setIsCrewMember(true)
+    setCrewMemberSearch('')
+    setSelectedCrewMember(null)
+    
+    // 전체 멤버 조회 (lookup 모드)
+    try {
+      const res = await fetch('/api/notion/members/?lookup=true')
+      const data = await res.json()
+      setAllMembers(data)
+    } catch (error) {
+      setAllMembers([])
+    }
+    
+    setApplyStep(10) // 크루원 선택 단계
   }
 
   // 게스트 선택 시
   const handleGuestSelect = () => {
+    setIsCrewMember(false)
     setApplyStep(0) // 약관 동의 단계로
+  }
+
+  // 크루원 검색 필터
+  const filteredCrewMembers = allMembers.filter(member => 
+    member.name.includes(crewMemberSearch)
+  )
+
+  // 크루원 선택 후 신청
+  const handleCrewMemberApply = async () => {
+    if (!selectedCrewMember || !applyScheduleId) return
+    
+    // 일정 찾기
+    const schedule = [...schedules, ...upcomingSchedules].find(s => s.id === applyScheduleId)
+    const scheduleTitle = schedule?.title || applyScheduleId
+    const currentCount = applicationCounts[scheduleTitle] || 0
+    
+    // 제한 인원 체크
+    if (schedule?.max_participants && currentCount >= schedule.max_participants) {
+      alert(`신청이 마감되었습니다. (제한 인원: ${schedule.max_participants}명)`)
+      return
+    }
+    
+    setApplySubmitting(true)
+    try {
+      const response = await fetch('/api/notion/applications/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedCrewMember.name,
+          phone: selectedCrewMember.phone || '',
+          kakaoId: selectedCrewMember.kakaoId || '',
+          scheduleId: scheduleTitle
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit')
+      }
+
+      // 신청자 수 즉시 업데이트
+      setApplicationCounts(prev => ({
+        ...prev,
+        [scheduleTitle]: (prev[scheduleTitle] || 0) + 1
+      }))
+
+      setApplyStep(11) // 크루원 신청 완료
+    } catch (error) {
+      alert('신청에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setApplySubmitting(false)
+    }
   }
 
   // 다음 단계로
@@ -198,48 +331,37 @@ export default function FRCPage() {
     
     setApplySubmitting(true)
     try {
-      const { supabase } = await import('@/lib/supabase')
+      // 제한 인원 체크 (현재 일정에서 max_participants 확인)
+      const currentSchedule = [...schedules, ...upcomingSchedules].find(s => s.id === applyScheduleId)
+      const currentCount = applicationCounts[currentSchedule?.title || ''] || 0
       
-      // 제한 인원 체크
-      const { data: scheduleData } = await (supabase as any)
-        .from('crew_schedules')
-        .select('max_participants')
-        .eq('id', applyScheduleId)
-        .single()
-      
-      const currentCount = applicationCounts[applyScheduleId] || 0
-      if (scheduleData?.max_participants && currentCount >= scheduleData.max_participants) {
-        alert(`신청이 마감되었습니다. (제한 인원: ${scheduleData.max_participants}명)`)
+      if (currentSchedule?.max_participants && currentCount >= currentSchedule.max_participants) {
+        alert(`신청이 마감되었습니다. (제한 인원: ${currentSchedule.max_participants}명)`)
         setApplySubmitting(false)
         return
       }
       
-      // 중복 신청 체크
-      const { data: existing } = await (supabase as any)
-        .from('schedule_applications')
-        .select('id')
-        .eq('schedule_id', applyScheduleId)
-        .eq('name', applyForm.name.trim())
-        .eq('phone', applyForm.phone.trim())
-        .maybeSingle()
-      
-      if (existing) {
-        alert('이미 동일한 이름과 전화번호로 신청하셨습니다.')
-        setApplySubmitting(false)
-        return
-      }
-      
-      await (supabase as any).from('schedule_applications').insert({
-        schedule_id: applyScheduleId,
-        name: applyForm.name.trim(),
-        phone: applyForm.phone.trim(),
-        kakao_id: applyForm.kakaoId?.trim() || null
+      // Notion에 신청자 등록
+      const scheduleTitle = currentSchedule?.title || applyScheduleId
+      const response = await fetch('/api/notion/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: applyForm.name.trim(),
+          phone: applyForm.phone.trim(),
+          kakaoId: applyForm.kakaoId?.trim() || null,
+          scheduleId: scheduleTitle,
+        }),
       })
       
-      // 신청자 수 즉시 업데이트
+      if (!response.ok) {
+        throw new Error('Failed to submit application')
+      }
+      
+      // 신청자 수 즉시 업데이트 (일정 제목으로)
       setApplicationCounts(prev => ({
         ...prev,
-        [applyScheduleId]: (prev[applyScheduleId] || 0) + 1
+        [scheduleTitle]: (prev[scheduleTitle] || 0) + 1
       }))
       
       setApplyStep(4) // 완료 화면
@@ -273,6 +395,63 @@ export default function FRCPage() {
   const handlePromoApply = (scheduleId: string) => {
     setShowPromoModal(false)
     openApplyModal(scheduleId)
+  }
+
+  // 멤버 가입 신청 모달 열기
+  const openMemberApplyModal = () => {
+    setMemberApplyStep(0)
+    setMemberApplyForm({ name: '', phone: '', kakaoId: '' })
+    setMemberAgreeTerms(false)
+    setMemberAgreePrivacy(false)
+    setShowMemberApplyModal(true)
+  }
+
+  // 멤버 가입 신청 다음 단계
+  const handleMemberApplyNext = () => {
+    if (memberApplyStep === 0 && (!memberAgreeTerms || !memberAgreePrivacy)) return
+    if (memberApplyStep === 1 && !memberApplyForm.name.trim()) return
+    if (memberApplyStep === 2 && !memberApplyForm.phone.trim() && !memberApplyForm.kakaoId.trim()) return
+    
+    if (memberApplyStep === 2) {
+      handleMemberApplySubmit()
+    } else if (memberApplyStep < 2) {
+      setMemberApplyStep(memberApplyStep + 1)
+    }
+  }
+
+  // 멤버 가입 신청 제출
+  const handleMemberApplySubmit = async () => {
+    setMemberApplySubmitting(true)
+    try {
+      const response = await fetch('/api/notion/members/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: memberApplyForm.name,
+          phone: memberApplyForm.phone,
+          kakaoId: memberApplyForm.kakaoId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to submit')
+      }
+
+      setMemberApplyStep(3)
+    } catch (error) {
+      alert('신청에 실패했습니다. 다시 시도해주세요.')
+    } finally {
+      setMemberApplySubmitting(false)
+    }
+  }
+
+  // 멤버 가입 신청 모달 닫기
+  const closeMemberApplyModal = () => {
+    setShowMemberApplyModal(false)
+    setMemberApplyStep(0)
+    setMemberApplyForm({ name: '', phone: '', kakaoId: '' })
+    setMemberAgreeTerms(false)
+    setMemberAgreePrivacy(false)
   }
 
   return (
@@ -695,22 +874,22 @@ export default function FRCPage() {
                   </div>
                 )}
 
-                {/* 가입 안내 */}
+                {/* 멤버 가입 안내 */}
                 <div className="mt-4 rounded-2xl bg-gradient-to-r from-[#EEF0FF] to-[#F7F8FF] px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[12px] font-semibold text-slate-900">
-                        FRC에 함께하고 싶다면?
+                        FRC와 함께하고 싶다면?
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        DM / 오픈채팅으로 문의해주세요
+                        지금 바로 멤버 신청하세요!
                       </p>
                     </div>
                     <button 
-                      onClick={() => setShowContactModal(true)}
+                      onClick={openMemberApplyModal}
                       className="px-3 py-1.5 rounded-full bg-slate-900 text-white text-[11px] font-medium"
                     >
-                      문의하기
+                      멤버신청
                     </button>
                   </div>
                 </div>
@@ -824,8 +1003,8 @@ export default function FRCPage() {
                             <Users className="w-4 h-4 text-white/60" />
                             <span className="text-[11px] text-white/60">
                               {schedule.max_participants 
-                                ? `${applicationCounts[schedule.id] || 0}/${schedule.max_participants}명`
-                                : `${applicationCounts[schedule.id] || 0}명 참여 예정`
+                                ? `${applicationCounts[schedule.title] || 0}/${schedule.max_participants}명`
+                                : `${applicationCounts[schedule.title] || 0}명 참여 예정`
                               }
                             </span>
                           </div>
@@ -853,6 +1032,20 @@ export default function FRCPage() {
           <div className="px-4">
             <h2 className="text-[13px] font-semibold text-slate-900 mb-3">연락처</h2>
             <div className="space-y-2">
+              {/* 멤버 가입 신청 */}
+              <button
+                onClick={openMemberApplyModal}
+                className="w-full flex items-center gap-3 rounded-xl bg-gradient-to-r from-slate-900 to-slate-800 px-4 py-3"
+              >
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[12px] font-semibold text-white">멤버 가입 신청</p>
+                  <p className="text-[11px] text-white/60">FRC 크루원이 되어보세요!</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/60" />
+              </button>
               <a
                 href="https://instagram.com/frc.seoul"
                 target="_blank"
@@ -878,7 +1071,7 @@ export default function FRCPage() {
                   <MessageCircle className="w-5 h-5 text-[#3C1E1E]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[12px] font-semibold text-slate-900">카카오톡 오픈채팅</p>
+                  <p className="text-[12px] font-semibold text-slate-900">카카오톡 문의하기</p>
                   <p className="text-[11px] text-slate-500">FRC 러닝크루</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -1038,7 +1231,7 @@ export default function FRCPage() {
                     <MessageCircle className="w-5 h-5 text-[#3C1E1E]" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[12px] font-semibold text-slate-900">카카오톡 오픈채팅</p>
+                    <p className="text-[12px] font-semibold text-slate-900">카카오톡 문의하기</p>
                     <p className="text-[11px] text-slate-500">FRC 러닝크루</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -1143,8 +1336,8 @@ export default function FRCPage() {
                     <p className="text-[11px] text-slate-500">참여 인원</p>
                     <p className="text-[13px] font-semibold text-slate-900">
                       {selectedSchedule.max_participants 
-                        ? `${applicationCounts[selectedSchedule.id] || 0}/${selectedSchedule.max_participants}명`
-                        : `${applicationCounts[selectedSchedule.id] || 0}명`
+                        ? `${applicationCounts[selectedSchedule.title] || 0}/${selectedSchedule.max_participants}명`
+                        : `${applicationCounts[selectedSchedule.title] || 0}명`
                       }
                     </p>
                   </div>
@@ -1527,6 +1720,126 @@ export default function FRCPage() {
                 </button>
               </div>
             )}
+
+            {/* 단계 10: 크루원 선택 */}
+            {applyStep === 10 && (
+              <div className="p-6">
+                <div className="text-center mb-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center mx-auto mb-3">
+                    <span className="text-white text-lg font-bold">C</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">크루원 확인</h3>
+                  <p className="text-[12px] text-slate-500 mt-1">이름을 입력해 본인을 찾아주세요</p>
+                </div>
+
+                {/* 검색 입력 */}
+                <input
+                  type="text"
+                  value={crewMemberSearch}
+                  onChange={(e) => setCrewMemberSearch(e.target.value)}
+                  placeholder="이름 입력"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-[14px] focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 mb-3"
+                />
+
+                {/* 멤버 목록 */}
+                <div className="max-h-48 overflow-y-auto space-y-2 mb-4">
+                  {crewMemberSearch && filteredCrewMembers.length === 0 && (
+                    <p className="text-center text-[12px] text-slate-400 py-4">
+                      일치하는 크루원이 없습니다
+                    </p>
+                  )}
+                  {crewMemberSearch && filteredCrewMembers.map((member: any) => (
+                    <button
+                      key={member.id}
+                      onClick={() => setSelectedCrewMember(member)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                        selectedCrewMember?.id === member.id
+                          ? 'border-slate-900 bg-slate-50'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
+                        {member.profile_image ? (
+                          <img src={member.profile_image} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[14px] font-bold text-slate-500">{member.name[0]}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="text-[13px] font-semibold text-slate-900">{member.name}</p>
+                        <p className="text-[11px] text-slate-500">
+                          {member.phoneHint || member.kakaoId || member.role}
+                        </p>
+                      </div>
+                      {selectedCrewMember?.id === member.id && (
+                        <Check className="w-5 h-5 text-slate-900" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setApplyStep(-1)}
+                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 text-[13px] font-semibold"
+                  >
+                    이전
+                  </button>
+                  <button
+                    onClick={handleCrewMemberApply}
+                    disabled={!selectedCrewMember || applySubmitting}
+                    className="flex-1 py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold disabled:opacity-50"
+                  >
+                    {applySubmitting ? '신청 중...' : '신청하기'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 단계 11: 크루원 신청 완료 */}
+            {applyStep === 11 && (
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">신청 완료!</h3>
+                <p className="text-[13px] text-slate-500 mb-6">
+                  {selectedCrewMember?.name}님, 신청이 완료되었습니다.<br />
+                  함께 달려요! 🏃‍♂️
+                </p>
+                <button
+                  onClick={closeApplyModal}
+                  className="w-full py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold"
+                >
+                  확인
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 모집 마감 모달 */}
+      {showClosedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <X className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">모집 마감</h3>
+              <p className="text-[13px] text-slate-500 mb-6">
+                이 일정은 모집이 마감되었습니다.<br />
+                다음 일정을 확인해주세요!
+              </p>
+              <button
+                onClick={() => setShowClosedModal(false)}
+                className="w-full py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold"
+              >
+                확인
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1620,8 +1933,8 @@ export default function FRCPage() {
                         <Users className="w-3 h-3 text-slate-400" />
                         <span className="text-[10px] text-slate-500">
                           {schedule.max_participants 
-                            ? `${applicationCounts[schedule.id] || 0}/${schedule.max_participants}명`
-                            : `${applicationCounts[schedule.id] || 0}명`
+                            ? `${applicationCounts[schedule.title] || 0}/${schedule.max_participants}명`
+                            : `${applicationCounts[schedule.title] || 0}명`
                           }
                         </span>
                       </div>
@@ -1647,6 +1960,256 @@ export default function FRCPage() {
                 오늘 하루 그만보기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 멤버 가입 신청 모달 */}
+      {showMemberApplyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* 단계 0: 약관 동의 */}
+            {memberApplyStep === 0 && (
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-6 h-6 text-slate-700" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">멤버 가입 신청</h3>
+                  <p className="text-[12px] text-slate-500 mt-1">FRC 크루원이 되어보세요!</p>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  {/* 전체 동의 */}
+                  <button
+                    onClick={() => {
+                      const allChecked = memberAgreeTerms && memberAgreePrivacy
+                      setMemberAgreeTerms(!allChecked)
+                      setMemberAgreePrivacy(!allChecked)
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200"
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      memberAgreeTerms && memberAgreePrivacy 
+                        ? 'bg-slate-900 border-slate-900' 
+                        : 'border-slate-300'
+                    }`}>
+                      {memberAgreeTerms && memberAgreePrivacy && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <span className="text-[13px] font-semibold text-slate-900">전체 동의</span>
+                  </button>
+
+                  {/* 이용약관 */}
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
+                    <button
+                      onClick={() => setMemberAgreeTerms(!memberAgreeTerms)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        memberAgreeTerms 
+                          ? 'bg-slate-900 border-slate-900' 
+                          : 'border-slate-300'
+                      }`}>
+                        {memberAgreeTerms && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-[13px] text-slate-700">[필수] 이용약관 동의</span>
+                    </button>
+                    <button 
+                      onClick={() => setShowMemberTermsDetail('terms')}
+                      className="text-[11px] text-slate-400 underline"
+                    >보기</button>
+                  </div>
+
+                  {/* 개인정보 수집 */}
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
+                    <button
+                      onClick={() => setMemberAgreePrivacy(!memberAgreePrivacy)}
+                      className="flex items-center gap-3"
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        memberAgreePrivacy 
+                          ? 'bg-slate-900 border-slate-900' 
+                          : 'border-slate-300'
+                      }`}>
+                        {memberAgreePrivacy && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-[13px] text-slate-700">[필수] 개인정보 수집 및 이용 동의</span>
+                    </button>
+                    <button 
+                      onClick={() => setShowMemberTermsDetail('privacy')}
+                      className="text-[11px] text-slate-400 underline"
+                    >보기</button>
+                  </div>
+                </div>
+
+                {/* 약관 상세 보기 */}
+                {showMemberTermsDetail && (
+                  <div className="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-200 max-h-48 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-[13px] font-semibold text-slate-900">
+                        {showMemberTermsDetail === 'terms' ? '이용약관' : '개인정보 수집 및 이용 동의'}
+                      </h4>
+                      <button 
+                        onClick={() => setShowMemberTermsDetail(null)}
+                        className="text-[11px] text-slate-400"
+                      >닫기</button>
+                    </div>
+                    {showMemberTermsDetail === 'terms' ? (
+                      <div className="text-[11px] text-slate-600 leading-relaxed space-y-2">
+                        <p className="font-medium text-slate-700">제1조 (목적)</p>
+                        <p>본 약관은 FRC SEOUL 러닝크루(이하 "크루")의 멤버 가입 및 활동에 관한 사항을 규정함을 목적으로 합니다.</p>
+                        <p className="font-medium text-slate-700 pt-2">제2조 (멤버의 의무)</p>
+                        <p>멤버는 크루 활동 시 본인의 안전에 책임을 지며, 크루의 규칙을 준수해야 합니다.</p>
+                      </div>
+                    ) : (
+                      <div className="text-[11px] text-slate-600 leading-relaxed space-y-2">
+                        <p className="font-medium text-slate-700">1. 수집하는 개인정보 항목</p>
+                        <p>필수: 이름, 전화번호 또는 카카오톡 ID</p>
+                        <p className="font-medium text-slate-700 pt-2">2. 개인정보 수집 및 이용 목적</p>
+                        <p>- 멤버 가입 신청 접수 및 확인<br />- 오픈톡방 안내 및 크루 활동 안내</p>
+                        <p className="font-medium text-slate-700 pt-2">3. 개인정보 보유 및 이용 기간</p>
+                        <p>멤버 탈퇴 시까지 보관</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={closeMemberApplyModal}
+                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 text-[13px] font-semibold"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleMemberApplyNext}
+                    disabled={!memberAgreeTerms || !memberAgreePrivacy}
+                    className="flex-1 py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold disabled:opacity-50"
+                  >
+                    동의하고 계속
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 단계 1: 이름 입력 */}
+            {memberApplyStep === 1 && (
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="w-3 h-3 rounded-full bg-slate-900 mx-auto mb-4" />
+                  <p className="text-[11px] text-slate-400 mb-1">1 / 2</p>
+                  <h3 className="text-lg font-bold text-slate-900">이름을 알려주세요</h3>
+                </div>
+                <input
+                  type="text"
+                  value={memberApplyForm.name}
+                  onChange={(e) => setMemberApplyForm({ ...memberApplyForm, name: e.target.value })}
+                  placeholder="이름"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-center text-[15px] focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                      e.preventDefault()
+                      handleMemberApplyNext()
+                    }
+                  }}
+                />
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={() => setMemberApplyStep(0)}
+                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 text-[13px] font-semibold"
+                  >
+                    이전
+                  </button>
+                  <button
+                    onClick={handleMemberApplyNext}
+                    disabled={!memberApplyForm.name.trim()}
+                    className="flex-1 py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold disabled:opacity-50"
+                  >
+                    다음
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 단계 2: 전화번호 또는 카카오톡 ID */}
+            {memberApplyStep === 2 && (
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="w-3 h-3 rounded-full bg-slate-900 mx-auto mb-4" />
+                  <p className="text-[11px] text-slate-400 mb-1">2 / 2</p>
+                  <h3 className="text-lg font-bold text-slate-900">연락처를 알려주세요</h3>
+                  <p className="text-[12px] text-slate-500 mt-1">전화번호 또는 카카오톡 ID 중 하나 입력</p>
+                </div>
+                <div className="space-y-3">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={memberApplyForm.phone}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      setMemberApplyForm({ ...memberApplyForm, phone: value })
+                    }}
+                    placeholder="전화번호 (01012341234)"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-center text-[15px] focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                  />
+                  <div className="text-center text-[11px] text-slate-400">또는</div>
+                  <input
+                    type="text"
+                    value={memberApplyForm.kakaoId}
+                    onChange={(e) => setMemberApplyForm({ ...memberApplyForm, kakaoId: e.target.value })}
+                    placeholder="카카오톡 ID"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-center text-[15px] focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                        e.preventDefault()
+                        handleMemberApplyNext()
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button
+                    onClick={() => setMemberApplyStep(1)}
+                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 text-[13px] font-semibold"
+                  >
+                    이전
+                  </button>
+                  <button
+                    onClick={handleMemberApplyNext}
+                    disabled={(!memberApplyForm.phone.trim() && !memberApplyForm.kakaoId.trim()) || memberApplySubmitting}
+                    className="flex-1 py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold disabled:opacity-50"
+                  >
+                    {memberApplySubmitting ? '신청 중...' : '신청하기'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 단계 3: 완료 */}
+            {memberApplyStep === 3 && (
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">가입 신청 완료!</h3>
+                <p className="text-[13px] text-slate-500 mb-4">
+                  {memberApplyForm.name}님, 가입 신청이 완료되었습니다.
+                </p>
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 mb-6">
+                  <p className="text-[12px] text-amber-700 leading-relaxed">
+                    📢 오픈톡방 안내를<br />
+                    <span className="font-semibold">문자 또는 카카오톡</span>으로 안내해 드립니다.
+                  </p>
+                </div>
+                <button
+                  onClick={closeMemberApplyModal}
+                  className="w-full py-3 rounded-xl bg-slate-900 text-white text-[13px] font-semibold"
+                >
+                  확인
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

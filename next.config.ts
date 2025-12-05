@@ -16,7 +16,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_KAKAO_MAP_API_KEY: process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY,
   },
   // Static export for Capacitor compatibility
-  output: 'export',
+  // Note: Disabled for development with API routes. Enable for Capacitor build.
+  // output: 'export',
   trailingSlash: true,
   async headers() {
     return [
